@@ -1,6 +1,5 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── Tema Değişkenleri ────────────────────────── */
 :root {
   --green:   #00e5a0;
   --green2:  #00ffb2;
@@ -10,7 +9,6 @@
   --radius:  12px;
 }
 
-/* Koyu Tema (varsayılan) */
 [data-theme="dark"] {
   --bg:      #0a0a0f;
   --bg2:     #12121a;
@@ -22,7 +20,6 @@
   --shadow:  rgba(0,0,0,0.4);
 }
 
-/* Açık Tema */
 [data-theme="light"] {
   --bg:      #f4f4f8;
   --bg2:     #ffffff;
@@ -30,7 +27,7 @@
   --bg4:     #dddde8;
   --border:  #d0d0e0;
   --text:    #1a1a2e;
-  --muted:   #7070899;
+  --muted:   #70708a;
   --shadow:  rgba(0,0,0,0.1);
 }
 
@@ -40,6 +37,15 @@ body {
   color: var(--text);
   min-height: 100vh;
   transition: background 0.2s, color 0.2s;
+}
+
+/* ── Page Wrapper ─────────────────────────────── */
+.page-wrapper {
+  display: grid;
+  grid-template-columns: 160px 1fr 160px;
+  align-items: flex-start;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
 /* ── Header ───────────────────────────────────── */
@@ -54,7 +60,7 @@ body {
 }
 
 .header-inner {
-  max-width: 1200px;
+  max-width: 1600px;
   margin: 0 auto;
   padding: 0 24px;
   height: 60px;
@@ -90,7 +96,6 @@ body {
   letter-spacing: 0.5px;
 }
 
-/* ── Tab Nav ──────────────────────────────────── */
 .tab-nav {
   display: flex;
   gap: 4px;
@@ -113,7 +118,6 @@ body {
 .tab-btn:hover { background: var(--bg3); color: var(--text); }
 .tab-btn.active { background: var(--bg3); color: var(--green); }
 
-/* ── Header Right ─────────────────────────────── */
 .header-right {
   display: flex;
   align-items: center;
@@ -136,7 +140,6 @@ body {
   border-radius: 6px;
 }
 
-/* ── Tema Toggle ──────────────────────────────── */
 .theme-toggle {
   background: var(--bg3);
   border: 1px solid var(--border);
@@ -152,9 +155,82 @@ body {
 
 /* ── Main Content ─────────────────────────────── */
 .main-content {
-  max-width: 1200px;
-  margin: 0 auto;
+  width: 100%;
   padding: 0 24px 80px;
+  min-width: 0;
+}
+
+/* ── Ad Sidebar ───────────────────────────────── */
+.ad-sidebar {
+  width: 160px;
+  padding: 32px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 60px;
+  height: fit-content;
+}
+
+.ad-slot {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 12px;
+  text-align: center;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.ad-slot:hover {
+  border-color: var(--green);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,229,160,0.08);
+}
+
+.ad-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.ad-logo { font-size: 32px; line-height: 1; }
+
+.ad-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.ad-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.ad-cta {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green);
+  background: rgba(0,229,160,0.1);
+  border: 1px solid rgba(0,229,160,0.3);
+  padding: 5px 10px;
+  border-radius: 6px;
+  width: 100%;
 }
 
 /* ── Tab Panels ───────────────────────────────── */
@@ -166,13 +242,8 @@ body {
   padding-top: 32px;
 }
 
-.page-header h2 {
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.page-header p { color: var(--muted); font-size: 14px; }
+.page-header h2 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+.page-header p  { color: var(--muted); font-size: 14px; }
 
 /* ── Landing Hero ─────────────────────────────── */
 .landing-hero {
@@ -224,10 +295,7 @@ body {
   margin-bottom: 16px;
 }
 
-.hero-note {
-  font-size: 12px;
-  color: var(--muted);
-}
+.hero-note { font-size: 12px; color: var(--muted); }
 
 /* ── Stats Grid ───────────────────────────────── */
 .stats-grid {
@@ -263,9 +331,7 @@ body {
 }
 
 /* ── How It Works ─────────────────────────────── */
-.how-it-works {
-  margin-bottom: 60px;
-}
+.how-it-works { margin-bottom: 60px; }
 
 .section-title {
   font-family: 'Space Mono', monospace;
@@ -295,7 +361,6 @@ body {
   border-radius: var(--radius);
   padding: 24px 20px;
   text-align: center;
-  position: relative;
 }
 
 .step-number {
@@ -306,28 +371,12 @@ body {
   margin-bottom: 12px;
 }
 
-.step-icon {
-  font-size: 28px;
-  margin-bottom: 12px;
-}
-
-.step-title {
-  font-size: 14px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  color: var(--text);
-}
-
-.step-desc {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.5;
-}
+.step-icon    { font-size: 28px; margin-bottom: 12px; }
+.step-title   { font-size: 14px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+.step-desc    { font-size: 13px; color: var(--muted); line-height: 1.5; }
 
 /* ── Why Nexrow ───────────────────────────────── */
-.why-nexrow {
-  margin-bottom: 60px;
-}
+.why-nexrow { margin-bottom: 60px; }
 
 .features-grid {
   display: grid;
@@ -342,23 +391,9 @@ body {
   padding: 24px;
 }
 
-.feature-icon {
-  font-size: 28px;
-  margin-bottom: 12px;
-}
-
-.feature-title {
-  font-size: 15px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  color: var(--text);
-}
-
-.feature-desc {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.6;
-}
+.feature-icon  { font-size: 28px; margin-bottom: 12px; }
+.feature-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+.feature-desc  { font-size: 13px; color: var(--muted); line-height: 1.6; }
 
 /* ── Spotlight ────────────────────────────────── */
 .spotlight-section {
@@ -454,11 +489,7 @@ body {
   color: var(--text);
 }
 
-.cta-sub {
-  color: var(--muted);
-  font-size: 15px;
-  margin-bottom: 28px;
-}
+.cta-sub { color: var(--muted); font-size: 15px; margin-bottom: 28px; }
 
 .cta-actions {
   display: flex;
@@ -476,11 +507,7 @@ body {
   margin-bottom: 20px;
 }
 
-.card h3 {
-  font-size: 16px;
-  font-weight: 700;
-  margin-bottom: 16px;
-}
+.card h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
 
 .card-header {
   display: flex;
@@ -515,12 +542,7 @@ body {
   margin-bottom: 16px;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
+.form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-group.full-width { grid-column: 1 / -1; }
 
 .form-group label {
@@ -753,28 +775,10 @@ code {
   color: var(--purple);
 }
 
-.creator-bio {
-  font-size: 13px;
-  color: var(--muted);
-  margin-bottom: 6px;
-  line-height: 1.5;
-}
+.creator-bio { font-size: 13px; color: var(--muted); margin-bottom: 6px; line-height: 1.5; }
+.creator-pricing { font-size: 13px; color: var(--text); margin-bottom: 8px; }
+.creator-stats { display: flex; gap: 14px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
 
-.creator-pricing {
-  font-size: 13px;
-  color: var(--text);
-  margin-bottom: 8px;
-}
-
-.creator-stats {
-  display: flex;
-  gap: 14px;
-  font-size: 12px;
-  color: var(--muted);
-  flex-wrap: wrap;
-}
-
-/* ── Category / Platform Tags ─────────────────── */
 .category-tag {
   font-size: 10px;
   font-weight: 700;
@@ -818,19 +822,8 @@ code {
 .listing-type-badge.project { background: rgba(78,158,255,0.1); color: var(--blue); }
 .listing-type-badge.creator { background: rgba(180,142,224,0.1); color: var(--purple); }
 
-.listing-title {
-  font-size: 15px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  line-height: 1.4;
-}
-
-.listing-desc {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.6;
-  margin-bottom: 10px;
-}
+.listing-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; line-height: 1.4; }
+.listing-desc  { font-size: 13px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
 
 .listing-footer {
   display: flex;
@@ -903,6 +896,11 @@ code {
 .tooltip-btn:hover .tooltip-text { visibility: visible; opacity: 1; }
 
 /* ── Responsive ───────────────────────────────── */
+@media (max-width: 1300px) {
+  .page-wrapper { grid-template-columns: 1fr; }
+  .ad-sidebar { display: none; }
+}
+
 @media (max-width: 900px) {
   .steps-grid { grid-template-columns: repeat(2, 1fr); }
   .features-grid { grid-template-columns: repeat(2, 1fr); }
