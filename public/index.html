@@ -23,7 +23,7 @@
         <button class="tab-btn" onclick="switchTab('escrow')">🔒 Escrow</button>
         <button class="tab-btn" onclick="switchTab('creators')">🌟 Creators</button>
         <button class="tab-btn" onclick="switchTab('board')">📋 Board</button>
-        <button class="tab-btn trusted-nav-btn" onclick="switchTab('creators');setCreatorFilter('trusted')">🛡️ Trusted</button>
+        <button class="tab-btn trusted-nav-btn" onclick="switchTab('creators');setCreatorFilter('trusted')">🛡️ Trusted Creators</button>
       </nav>
       <div class="header-right">
         <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙</button>
@@ -307,7 +307,7 @@
             <h3>🏆 Leaderboard</h3>
             <div class="filter-row">
               <button class="btn-sm active-filter" id="filter-all" onclick="setCreatorFilter('all')">All</button>
-              <button class="btn-sm" id="filter-trusted" onclick="setCreatorFilter('trusted')">🛡️ Trusted Creators</button>
+              <button class="btn-sm" id="filter-trusted" onclick="setCreatorFilter('trusted')">🛡️ Trusted</button>
               <select id="creator-category-filter" onchange="loadCreators()">
                 <option value="">All Categories</option>
                 <option value="Micro Creator">Micro Creator</option>
