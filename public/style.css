@@ -924,3 +924,6 @@ code {
   .features-grid { grid-template-columns: 1fr; }
   .main-content { padding: 0 16px 60px; }
 }
+.trusted-nav-btn { color: var(--green); }
+.trusted-nav-btn:hover { background: rgba(0,229,160,0.1); }
+.trusted-nav-btn.active { background: rgba(0,229,160,0.1); color: var(--green); }
