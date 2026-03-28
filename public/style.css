@@ -42,8 +42,8 @@ body {
 /* ── Page Wrapper ─────────────────────────────── */
 .page-wrapper {
   display: grid;
-  grid-template-columns: 200px 1fr 200px;
-  align-items: flex-start;
+grid-template-columns: 240px 1fr 240px;
+align-items: flex-start;
   max-width: 1600px;
   margin: 0 auto;
 }
@@ -162,7 +162,7 @@ body {
 
 /* ── Ad Sidebar ───────────────────────────────── */
 .ad-sidebar {
-  width: 200px;
+  width: 240px;
   padding: 32px 10px;
   display: flex;
   flex-direction: column;
@@ -176,9 +176,9 @@ body {
   background: var(--bg2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 16px 12px;
+  padding: 20px 16px;
   text-align: center;
-  min-height: 280px;
+  min-height: 320px;
   display: flex;
   flex-direction: column;
   align-items: center;
