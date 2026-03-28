@@ -1,0 +1,68 @@
+{
+  "escrows": {
+    "1": {
+      "id": "1",
+      "creator": "@testuser",
+      "condition": "likes > 1",
+      "amount": 1,
+      "status": "condition_met",
+      "createdAt": "2026-03-25T08:02:20.537Z",
+      "updatedAt": "2026-03-25T08:03:09.398Z",
+      "creatorWallet": "0xF4BA1a33b5d868441a57003De670aa928197e20e",
+      "payerWallet": "0xec0b6d183c4d09cf40d192c0eb801a32ddcdc114",
+      "txHash": "0x5bc2f4c828803a92607d34163d2ec4426d0a3825534809e07d605e846ab5af36",
+      "releaseTxHash": null,
+      "fee": 0.02,
+      "creatorAmount": 0.98,
+      "lastStats": {
+        "followers": 392,
+        "likes": 85,
+        "views": 4960,
+        "source": "mock"
+      }
+    },
+    "2": {
+      "id": "2",
+      "creator": "@testuser2",
+      "condition": "likes > 10",
+      "amount": 1,
+      "status": "condition_met",
+      "createdAt": "2026-03-25T08:06:01.056Z",
+      "updatedAt": "2026-03-25T08:10:24.343Z",
+      "creatorWallet": "0xF4BA1a33b5d868441a57003De670aa928197e20e",
+      "payerWallet": "0xec0b6d183c4d09cf40d192c0eb801a32ddcdc114",
+      "txHash": "0xc048b2cd6bdc2580c797730712d7cd69c263fb1021f5e443db3ffc53ff3605ef",
+      "releaseTxHash": null,
+      "fee": 0.02,
+      "creatorAmount": 0.98,
+      "lastStats": {
+        "followers": 2893,
+        "likes": 196,
+        "views": 702,
+        "source": "mock"
+      }
+    },
+    "3": {
+      "id": "3",
+      "creator": "testnetuser3",
+      "condition": "likes > 10",
+      "amount": 1,
+      "status": "paid",
+      "createdAt": "2026-03-25T08:11:03.875Z",
+      "updatedAt": "2026-03-25T08:27:57.076Z",
+      "creatorWallet": "0xF4BA1a33b5d868441a57003De670aa928197e20e",
+      "payerWallet": "0xec0b6d183c4d09cf40d192c0eb801a32ddcdc114",
+      "txHash": "0xe2560a65a3177bff1107dbeb8e3b8863ccd7c6cfb19a9f52d0c953b47871a646",
+      "releaseTxHash": "0x22f527b287e52a839d6a52fef4d88ce63a0cba31abb7f5958e1067476e1a3e44",
+      "fee": 0.02,
+      "creatorAmount": 0.98,
+      "lastStats": {
+        "followers": 2266,
+        "likes": 52,
+        "views": 6688,
+        "source": "mock"
+      }
+    }
+  },
+  "nextId": 4
+}

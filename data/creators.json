@@ -1,0 +1,18 @@
+{
+  "creators": {
+    "0xec0b6d183c4d09cf40d192c0eb801a32ddcdc114": {
+      "id": "1",
+      "wallet": "0xec0b6d183c4d09cf40d192c0eb801a32ddcdc114",
+      "twitter": "@itstorvian",
+      "category": "KOL",
+      "bio": "Creating quality contents \n100k+ followers",
+      "pricing": "1000",
+      "status": "approved",
+      "completedEscrows": 0,
+      "totalEarned": 0,
+      "score": 0,
+      "registeredAt": "2026-03-28T13:42:09.777Z"
+    }
+  },
+  "nextId": 2
+}
