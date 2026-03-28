@@ -16,13 +16,14 @@ function initTheme() {
 }
 
 initTheme();
+
 const USDC_CONTRACT   = '0x3600000000000000000000000000000000000000';
 const USDC_ABI = [
   'function transfer(address to, uint256 amount) returns (bool)',
   'function balanceOf(address account) view returns (uint256)'
 ];
 const ARC_CHAIN_ID    = '0x4CE832';
-const API = window.location.origin === 'http://127.0.0.1:5500' || window.location.origin === 'http://localhost:5500'
+const API             = window.location.origin === 'http://127.0.0.1:5500' || window.location.origin === 'http://localhost:5500'
   ? 'http://localhost:3001'
   : window.location.origin;
 const PLATFORM_WALLET = '0xec0B6d183c4d09cf40d192c0eB801A32DDcdC114';
@@ -45,21 +46,19 @@ function switchTab(tab) {
   if (tab === 'board')    loadListings();
 }
 
-// Escrow formunda platform seçilince condition hint'i güncelle
 function updateConditionHint() {
-  const platform = document.getElementById('escrow-platform')?.value;
-  const hint     = document.getElementById('condition-hint');
+  const platform  = document.getElementById('escrow-platform')?.value;
+  const hint      = document.getElementById('condition-hint');
   const condition = document.getElementById('condition');
   if (!hint || !condition) return;
-
   if (platform === 'twitter') {
-    hint.innerText = 'Twitter/X: likes > 100, followers >= 500, views < 10000';
+    hint.innerText      = 'Twitter/X: likes > 100, followers >= 500, views < 10000';
     condition.placeholder = 'likes > 100';
-    condition.value = '';
+    condition.value     = '';
   } else {
-    hint.innerText = 'Instagram / TikTok / YouTube için "manual" yazın — siz manuel onaylarsınız.';
+    hint.innerText      = 'Instagram / TikTok / YouTube için "manual" yazın.';
     condition.placeholder = 'manual';
-    condition.value = 'manual';
+    condition.value     = 'manual';
   }
 }
 
@@ -96,7 +95,7 @@ async function setConnected(address) {
 
 function disconnectWallet() {
   currentAddress = null;
-  document.getElementById('wallet-btn').innerText         = '🦊 Connect';
+  document.getElementById('wallet-btn').innerText         = 'Connect';
   document.getElementById('wallet-address').innerText     = '';
   document.getElementById('wallet-balance').innerText     = '';
   document.getElementById('disconnect-btn').style.display = 'none';
@@ -295,11 +294,9 @@ async function checkCondition(id) {
   }
 }
 
-// Manual approve — Instagram/TikTok/YouTube için
 async function approveManual(id) {
   if (!currentAddress) return showToast('Connect wallet to approve', 'error');
-  if (!window.confirm('Manually approve this escrow? This confirms the creator delivered.')) return;
-
+  if (!window.confirm('Manually approve this escrow?')) return;
   try {
     const res  = await fetch(`${API}/approve/${id}`, { method: 'POST' });
     const data = await res.json();
@@ -418,9 +415,7 @@ function renderEscrow(e) {
   return `
     <div class="escrow-item status-border-${e.status}">
       <div class="escrow-header">
-        <span class="escrow-creator">${e.creator}
-          ${isManual ? '<span class="badge-manual">Manual</span>' : ''}
-        </span>
+        <span class="escrow-creator">${e.creator}${isManual ? '<span class="badge-manual">Manual</span>' : ''}</span>
         <span class="badge badge-${e.status}">${statusLabel}</span>
       </div>
       <div class="escrow-details">
@@ -451,10 +446,16 @@ function renderEscrow(e) {
 }
 
 // ─── CREATORS ─────────────────────────────────────────────────────────────────
+function getStars(completedEscrows) {
+  if (completedEscrows === 0) return '<span style="color:var(--muted);font-size:12px;">No escrows yet</span>';
+  const stars = Math.min(5, Math.floor(completedEscrows / 2) + 1);
+  return '⭐'.repeat(stars) + `<span style="font-size:11px;color:var(--muted);margin-left:4px;">(${completedEscrows} completed)</span>`;
+}
+
 function setCreatorFilter(filter) {
   creatorFilter = filter;
-  document.getElementById('filter-all').classList.toggle('active-filter', filter === 'all');
-  document.getElementById('filter-trusted').classList.toggle('active-filter', filter === 'trusted');
+  document.getElementById('filter-all')?.classList.toggle('active-filter', filter === 'all');
+  document.getElementById('filter-trusted')?.classList.toggle('active-filter', filter === 'trusted');
   loadCreators();
 }
 
@@ -464,11 +465,11 @@ async function registerCreator() {
     if (!addr) return;
   }
 
-  const twitter      = document.getElementById('reg-twitter').value.trim();
-  const category     = document.getElementById('reg-category').value;
-  const platform     = document.getElementById('reg-platform').value;
-  const pricing      = document.getElementById('reg-pricing').value.trim();
-  const bio          = document.getElementById('reg-bio').value.trim();
+  const twitter       = document.getElementById('reg-twitter').value.trim();
+  const category      = document.getElementById('reg-category').value;
+  const platform      = document.getElementById('reg-platform').value;
+  const pricing       = document.getElementById('reg-pricing').value.trim();
+  const bio           = document.getElementById('reg-bio').value.trim();
   const followerRange = document.getElementById('reg-follower-range').value;
 
   if (!twitter || !category) return showToast('Handle and category are required', 'error');
@@ -483,8 +484,8 @@ async function registerCreator() {
     if (!res.ok) return showToast(data.error || 'Error', 'error');
     showToast('✅ Registered as creator!', 'success');
     clearForm(['reg-twitter', 'reg-pricing', 'reg-bio']);
-    document.getElementById('reg-category').value      = '';
-    document.getElementById('reg-platform').value      = 'Twitter/X';
+    document.getElementById('reg-category').value       = '';
+    document.getElementById('reg-platform').value       = 'Twitter/X';
     document.getElementById('reg-follower-range').value = '';
     loadCreators();
     loadHome();
@@ -528,12 +529,11 @@ async function loadCreators() {
             <span class="platform-tag">${c.platform || 'Twitter/X'}</span>
             ${c.followerRange ? `<span class="category-tag">${c.followerRange}</span>` : ''}
             ${c.trusted ? '<span class="trusted-badge">🛡️ Trusted</span>' : ''}
-            <span class="score-badge">${c.score} pts</span>
           </div>
+          <div style="margin:6px 0 8px;">${getStars(c.completedEscrows)}</div>
           ${c.bio ? `<p class="creator-bio">${c.bio}</p>` : ''}
           ${c.pricing ? `<p class="creator-pricing">💰 ${c.pricing}</p>` : ''}
           <div class="creator-stats">
-            <span>✅ ${c.completedEscrows} completed</span>
             <span>💵 ${c.totalEarned} USDC earned</span>
             <span>📅 Since ${new Date(c.registeredAt).toLocaleDateString()}</span>
           </div>
