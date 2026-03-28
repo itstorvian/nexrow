@@ -1,3 +1,21 @@
+// ─── Tema Toggle ──────────────────────────────────────────────────────────────
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  document.getElementById('theme-btn').innerText = next === 'dark' ? '🌙' : '☀️';
+  localStorage.setItem('nexrow-theme', next);
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('nexrow-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  const btn = document.getElementById('theme-btn');
+  if (btn) btn.innerText = saved === 'dark' ? '🌙' : '☀️';
+}
+
+initTheme();
 const USDC_CONTRACT   = '0x3600000000000000000000000000000000000000';
 const USDC_ABI = [
   'function transfer(address to, uint256 amount) returns (bool)',

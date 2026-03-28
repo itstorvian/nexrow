@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Nexrow — Creator Payment Protocol</title>
+  <title>Nexrow — Condition-Based Creator Payments</title>
+  <meta name="description" content="Pay creators only when they deliver. Condition-based USDC escrow on ARC Network." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
@@ -19,18 +20,18 @@
         <span class="network-badge">ARC Testnet</span>
       </div>
       <nav class="tab-nav">
-        <button class="tab-btn active" onclick="switchTab('home')">🏠 Home</button>
+        <button class="tab-btn active" onclick="switchTab('home')">Home</button>
         <button class="tab-btn" onclick="switchTab('escrow')">🔒 Escrow</button>
         <button class="tab-btn" onclick="switchTab('creators')">🌟 Creators</button>
         <button class="tab-btn" onclick="switchTab('board')">📋 Board</button>
       </nav>
       <div class="header-right">
+        <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙</button>
         <span id="wallet-balance" class="wallet-balance"></span>
         <span id="wallet-address" class="wallet-address"></span>
         <button onclick="connectWallet()" id="wallet-btn">Connect</button>
         <button onclick="disconnectWallet()" id="disconnect-btn" class="btn-outline-danger tooltip-btn" style="display:none;">
-          ⛔
-          <span class="tooltip-text">Disconnect</span>
+          ⛔<span class="tooltip-text">Disconnect</span>
         </button>
       </div>
     </div>
@@ -39,36 +40,134 @@
   <main class="main-content">
 
     <!-- ══════════════════════════════════════════
-         TAB: HOME
+         TAB: HOME (Landing Page)
     ══════════════════════════════════════════ -->
     <div id="tab-home" class="tab-panel active">
 
-      <section class="hero">
-        <h1 class="hero-title">Condition-Based<br>Creator Payments</h1>
-        <p class="hero-sub">Pay creators only when they deliver. Secured by $USDC on ARC Network.</p>
+      <!-- Hero -->
+      <section class="landing-hero">
+        <div class="hero-tag">⚡ Built on ARC Network</div>
+        <h1 class="hero-title">
+          Pay Creators<br>
+          <span class="accent">Only When They Deliver</span>
+        </h1>
+        <p class="hero-sub">
+          Condition-based $USDC escrow for the creator economy. 
+          Set a goal, lock funds, release only when conditions are met.
+        </p>
         <div class="hero-actions">
           <button onclick="switchTab('escrow')">🔒 Create Escrow</button>
-          <button class="btn-secondary" onclick="switchTab('board')">📋 Browse Board</button>
+          <button class="btn-secondary" onclick="switchTab('creators')">🌟 Browse Creators</button>
+          <button class="btn-secondary" onclick="switchTab('board')">📋 Post a Listing</button>
+        </div>
+        <p class="hero-note">No trust required. Code enforces the deal.</p>
+      </section>
+
+      <!-- Stats -->
+      <div id="home-stats" class="stats-grid"></div>
+
+      <!-- How It Works -->
+      <section class="how-it-works">
+        <h2 class="section-title">How It Works</h2>
+        <p class="section-sub">Three steps. No middlemen. No trust required.</p>
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-number">01</div>
+            <div class="step-icon">🔒</div>
+            <div class="step-title">Lock USDC</div>
+            <div class="step-desc">Project deposits USDC into escrow. Funds are locked until conditions are verified.</div>
+          </div>
+          <div class="step-card">
+            <div class="step-number">02</div>
+            <div class="step-icon">🎯</div>
+            <div class="step-title">Set Condition</div>
+            <div class="step-desc">Define measurable goals: likes, followers, views — or manual approval for any platform.</div>
+          </div>
+          <div class="step-card">
+            <div class="step-number">03</div>
+            <div class="step-icon">✅</div>
+            <div class="step-title">Verify & Release</div>
+            <div class="step-desc">Condition met? Payment goes to creator automatically. Not met? Funds return to the project.</div>
+          </div>
+          <div class="step-card">
+            <div class="step-number">04</div>
+            <div class="step-icon">🏆</div>
+            <div class="step-title">Build Trust</div>
+            <div class="step-desc">Every completed escrow builds your creator score. Top performers earn Trusted status.</div>
+          </div>
         </div>
       </section>
 
-      <div id="home-stats" class="stats-grid"></div>
+      <!-- Why Nexrow -->
+      <section class="why-nexrow">
+        <h2 class="section-title">Why Nexrow?</h2>
+        <p class="section-sub">Solving the broken creator payment model.</p>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">💵</div>
+            <div class="feature-title">$USDC — Not Volatile Tokens</div>
+            <div class="feature-desc">Creators get paid in stablecoins. No dump risk. No claim delays. Real value, always.</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🌐</div>
+            <div class="feature-title">Any Platform</div>
+            <div class="feature-desc">Twitter/X, Instagram, TikTok, YouTube — we support all platforms via automatic or manual verification.</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <div class="feature-title">Low Fees on ARC</div>
+            <div class="feature-desc">Micro-payments are economically viable. 2% platform fee. Fast transactions on ARC Network.</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🛡️</div>
+            <div class="feature-title">Trusted Creator System</div>
+            <div class="feature-desc">Performance-based reputation. Creators who deliver get featured. Bad actors can't fake their way in.</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🤝</div>
+            <div class="feature-title">No Trust Required</div>
+            <div class="feature-desc">Projects don't need to trust creators. Creators don't need to trust projects. The protocol enforces the deal.</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📋</div>
+            <div class="feature-title">Open Marketplace</div>
+            <div class="feature-desc">Projects find creators. Creators find projects. Browse listings, connect, and get to work.</div>
+          </div>
+        </div>
+      </section>
 
+      <!-- Spotlight -->
       <section class="spotlight-section">
         <div class="spotlight-col">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-  <h3 style="margin-bottom:0;">🛡️ Trusted Creators</h3>
-  <button class="btn-sm" onclick="switchTab('creators');setCreatorFilter('trusted')">View All →</button>
-</div>
+          <div class="spotlight-col-header">
+            <h3>🛡️ Trusted Creators</h3>
+            <button class="btn-sm" onclick="switchTab('creators');setCreatorFilter('trusted')">View All →</button>
+          </div>
           <div id="spotlight-creators">Loading...</div>
         </div>
         <div class="spotlight-col">
-          <h3>🔥 Latest Projects</h3>
+          <div class="spotlight-col-header">
+            <h3>🔥 Latest Projects</h3>
+            <button class="btn-sm" onclick="switchTab('board')">View All →</button>
+          </div>
           <div id="spotlight-projects">Loading...</div>
         </div>
         <div class="spotlight-col">
-          <h3>💼 Creator Listings</h3>
+          <div class="spotlight-col-header">
+            <h3>💼 Creator Listings</h3>
+            <button class="btn-sm" onclick="switchTab('board')">View All →</button>
+          </div>
           <div id="spotlight-listings">Loading...</div>
+        </div>
+      </section>
+
+      <!-- CTA -->
+      <section class="cta-section">
+        <h2 class="cta-title">Ready to get started?</h2>
+        <p class="cta-sub">Join the first condition-based creator payment protocol on ARC Network.</p>
+        <div class="cta-actions">
+          <button onclick="switchTab('escrow')">🔒 Create Your First Escrow</button>
+          <button class="btn-secondary" onclick="switchTab('creators')">🌟 Register as Creator</button>
         </div>
       </section>
 
