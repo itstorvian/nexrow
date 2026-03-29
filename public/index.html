@@ -22,8 +22,8 @@
         <button class="tab-btn active" onclick="switchTab('home')">Home</button>
         <button class="tab-btn" onclick="switchTab('escrow')">💰 Pay a Creator</button>
         <button class="tab-btn" onclick="switchTab('creators')">🌟 Find Creators</button>
+        <button class="tab-btn" onclick="switchTab('register')">➕ Register</button>
         <button class="tab-btn" onclick="switchTab('board')">📋 Listings</button>
-        <button class="tab-btn trusted-nav-btn" onclick="switchTab('trusted')">🛡️ Trusted Creators</button>
       </nav>
       <div class="header-right">
         <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙</button>
@@ -71,7 +71,7 @@
           <p class="cta-sub">Join the first condition-based creator payment protocol on ARC Network.</p>
           <div class="cta-actions">
             <button onclick="switchTab('escrow')">💰 Pay a Creator</button>
-            <button class="btn-secondary" onclick="switchTab('creators')">🌟 Register as Creator</button>
+            <button class="btn-secondary" onclick="switchTab('register')">🌟 Register as Creator</button>
           </div>
         </section>
 
@@ -147,7 +147,7 @@
 
       </div>
 
-      <!-- ══ TAB: ESCROW ══ -->
+      <!-- ══ TAB: PAY A CREATOR (ESCROW) ══ -->
       <div id="tab-escrow" class="tab-panel">
         <div class="page-header">
           <h2>💰 Pay a Creator</h2>
@@ -199,11 +199,56 @@
         </div>
       </div>
 
-      <!-- ══ TAB: CREATORS ══ -->
+      <!-- ══ TAB: FIND CREATORS ══ -->
       <div id="tab-creators" class="tab-panel">
         <div class="page-header">
-          <h2>🌟 Creators</h2>
-          <p>Register as a creator or discover talent on Nexrow.</p>
+          <h2>🌟 Find Creators</h2>
+          <p>Discover talented creators on Nexrow. Filter by category, platform or trust level.</p>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3>🏆 Leaderboard</h3>
+            <div class="filter-row">
+              <button class="btn-sm" id="filter-all" onclick="setCreatorFilter('all')">All</button>
+              <button class="btn-sm" id="filter-trusted" onclick="setCreatorFilter('trusted')">🛡️ Trusted</button>
+              <select id="creator-category-filter" onchange="loadCreators()">
+                <option value="">All Categories</option>
+                <option value="Micro Creator">Micro Creator</option>
+                <option value="Content Creator">Content Creator</option>
+                <option value="KOL">KOL</option>
+                <option value="Thread Writer">Thread Writer</option>
+                <option value="Developer">Developer</option>
+                <option value="Artist & Designer">Artist & Designer</option>
+                <option value="Educator">Educator</option>
+                <option value="Gaming">Gaming</option>
+                <option value="Meme & Community">Meme & Community</option>
+                <option value="DeFi Analyst">DeFi Analyst</option>
+                <option value="NFT Curator">NFT Curator</option>
+                <option value="Podcast & Video">Podcast & Video</option>
+                <option value="Instagram Creator">Instagram Creator</option>
+                <option value="TikTok Creator">TikTok Creator</option>
+                <option value="YouTube Creator">YouTube Creator</option>
+                <option value="Other">Other</option>
+              </select>
+              <select id="creator-platform-filter" onchange="loadCreators()">
+                <option value="">All Platforms</option>
+                <option value="Twitter/X">Twitter / X</option>
+                <option value="Instagram">Instagram</option>
+                <option value="TikTok">TikTok</option>
+                <option value="YouTube">YouTube</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div id="creator-list">Loading...</div>
+        </div>
+      </div>
+
+      <!-- ══ TAB: REGISTER AS CREATOR ══ -->
+      <div id="tab-register" class="tab-panel">
+        <div class="page-header">
+          <h2>➕ Register as Creator</h2>
+          <p>Join Nexrow as a creator. Get discovered by projects and earn USDC.</p>
         </div>
         <div class="card">
           <h3>Become a Creator</h3>
@@ -266,86 +311,6 @@
             </div>
           </div>
           <button id="register-btn" onclick="registerCreator()">🌟 Register as Creator</button>
-        </div>
-        <div class="card">
-          <div class="card-header">
-            <h3>🏆 Leaderboard</h3>
-            <div class="filter-row">
-              <button class="btn-sm" id="filter-all" onclick="setCreatorFilter('all')">All</button>
-              <button class="btn-sm" id="filter-trusted" onclick="setCreatorFilter('trusted')">🛡️ Trusted</button>
-              <select id="creator-category-filter" onchange="loadCreators()">
-                <option value="">All Categories</option>
-                <option value="Micro Creator">Micro Creator</option>
-                <option value="Content Creator">Content Creator</option>
-                <option value="KOL">KOL</option>
-                <option value="Thread Writer">Thread Writer</option>
-                <option value="Developer">Developer</option>
-                <option value="Artist & Designer">Artist & Designer</option>
-                <option value="Educator">Educator</option>
-                <option value="Gaming">Gaming</option>
-                <option value="Meme & Community">Meme & Community</option>
-                <option value="DeFi Analyst">DeFi Analyst</option>
-                <option value="NFT Curator">NFT Curator</option>
-                <option value="Podcast & Video">Podcast & Video</option>
-                <option value="Instagram Creator">Instagram Creator</option>
-                <option value="TikTok Creator">TikTok Creator</option>
-                <option value="YouTube Creator">YouTube Creator</option>
-                <option value="Other">Other</option>
-              </select>
-              <select id="creator-platform-filter" onchange="loadCreators()">
-                <option value="">All Platforms</option>
-                <option value="Twitter/X">Twitter / X</option>
-                <option value="Instagram">Instagram</option>
-                <option value="TikTok">TikTok</option>
-                <option value="YouTube">YouTube</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          </div>
-          <div id="creator-list">Loading...</div>
-        </div>
-      </div>
-
-      <!-- ══ TAB: TRUSTED CREATORS ══ -->
-      <div id="tab-trusted" class="tab-panel">
-        <div class="page-header">
-          <h2>🛡️ Trusted Creators</h2>
-          <p>Verified by performance. These creators have completed real escrows and delivered results.</p>
-        </div>
-        <div class="card">
-          <div class="card-header">
-            <h3>🛡️ Trusted Creator List</h3>
-            <div class="filter-row">
-              <select id="trusted-category-filter" onchange="loadTrustedCreators()">
-                <option value="">All Categories</option>
-                <option value="Micro Creator">Micro Creator</option>
-                <option value="Content Creator">Content Creator</option>
-                <option value="KOL">KOL</option>
-                <option value="Thread Writer">Thread Writer</option>
-                <option value="Developer">Developer</option>
-                <option value="Artist & Designer">Artist & Designer</option>
-                <option value="Educator">Educator</option>
-                <option value="Gaming">Gaming</option>
-                <option value="Meme & Community">Meme & Community</option>
-                <option value="DeFi Analyst">DeFi Analyst</option>
-                <option value="NFT Curator">NFT Curator</option>
-                <option value="Podcast & Video">Podcast & Video</option>
-                <option value="Instagram Creator">Instagram Creator</option>
-                <option value="TikTok Creator">TikTok Creator</option>
-                <option value="YouTube Creator">YouTube Creator</option>
-                <option value="Other">Other</option>
-              </select>
-              <select id="trusted-platform-filter" onchange="loadTrustedCreators()">
-                <option value="">All Platforms</option>
-                <option value="Twitter/X">Twitter / X</option>
-                <option value="Instagram">Instagram</option>
-                <option value="TikTok">TikTok</option>
-                <option value="YouTube">YouTube</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          </div>
-          <div id="trusted-list">Loading...</div>
         </div>
       </div>
 
