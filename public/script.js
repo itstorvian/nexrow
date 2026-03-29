@@ -44,6 +44,7 @@ function switchTab(tab) {
   if (tab === 'escrow')   loadEscrows();
   if (tab === 'creators') loadCreators();
   if (tab === 'board')    loadListings();
+  if (tab === 'trusted')  loadTrustedCreators();
 }
 
 function updateConditionHint() {
@@ -229,7 +230,7 @@ async function deposit() {
   } catch (err) {
     showToast(err.message, 'error');
   } finally {
-    setLoading('deposit-btn', false, '💰 Deposit');
+    setLoading('deposit-btn', false, '💰 Pay a Creator');
   }
 }
 
@@ -261,7 +262,7 @@ async function approveManual(id) {
     const res  = await fetch(`${API}/approve/${id}`, { method: 'POST' });
     const data = await res.json();
     if (!res.ok) return showToast(data.error || 'Error', 'error');
-    showToast('✅ Approved! Click Release to send payment.', 'success');
+    showToast('✅ Approved! Click Mark as Paid.', 'success');
     loadEscrows();
   } catch (err) {
     showToast(err.message, 'error');
@@ -473,6 +474,54 @@ async function loadCreators() {
           ${c.bio ? `<p class="creator-bio">${c.bio}</p>` : ''}
           ${c.pricing ? `<p class="creator-pricing">💰 ${c.pricing}</p>` : ''}
           <div class="creator-stats">
+            <span>💵 ${c.totalEarned} USDC earned</span>
+            <span>📅 Since ${new Date(c.registeredAt).toLocaleDateString()}</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    el.innerHTML = `<p class="empty">Failed to load: ${err.message}</p>`;
+  }
+}
+
+// ─── TRUSTED CREATORS ─────────────────────────────────────────────────────────
+async function loadTrustedCreators() {
+  const el = document.getElementById('trusted-list');
+  if (!el) return;
+  el.innerHTML = '<p class="loading">Loading...</p>';
+  try {
+    const category = document.getElementById('trusted-category-filter')?.value || '';
+    const platform = document.getElementById('trusted-platform-filter')?.value || '';
+    const params   = ['trusted=true'];
+    if (category) params.push(`category=${encodeURIComponent(category)}`);
+    if (platform) params.push(`platform=${encodeURIComponent(platform)}`);
+    const url = `${API}/creators?${params.join('&')}`;
+
+    const res  = await fetch(url);
+    const list = await res.json();
+
+    if (!list.length) {
+      el.innerHTML = '<p class="empty">No trusted creators yet. Complete escrows to earn trust!</p>';
+      return;
+    }
+
+    el.innerHTML = list.map((c, i) => `
+      <div class="creator-card">
+        <div class="creator-rank">#${i + 1}</div>
+        <div class="creator-info">
+          <div class="creator-top">
+            <b class="creator-handle">${c.twitter}</b>
+            <span class="category-tag">${c.category}</span>
+            <span class="platform-tag">${c.platform || 'Twitter/X'}</span>
+            ${c.followerRange ? `<span class="category-tag">${c.followerRange}</span>` : ''}
+            <span class="trusted-badge">🛡️ Trusted</span>
+          </div>
+          <div style="margin:6px 0 8px;">${getStars(c.completedEscrows)}</div>
+          ${c.bio ? `<p class="creator-bio">${c.bio}</p>` : ''}
+          ${c.pricing ? `<p class="creator-pricing">💰 ${c.pricing}</p>` : ''}
+          <div class="creator-stats">
+            <span>✅ ${c.completedEscrows} completed</span>
             <span>💵 ${c.totalEarned} USDC earned</span>
             <span>📅 Since ${new Date(c.registeredAt).toLocaleDateString()}</span>
           </div>

@@ -20,10 +20,10 @@
       </div>
       <nav class="tab-nav">
         <button class="tab-btn active" onclick="switchTab('home')">Home</button>
-        <button class="tab-btn" onclick="switchTab('escrow')">🔒 Escrow</button>
-        <button class="tab-btn" onclick="switchTab('creators')">🌟 Creators</button>
-        <button class="tab-btn" onclick="switchTab('board')">📋 Board</button>
-        <button class="tab-btn trusted-nav-btn" onclick="switchTab('creators');setCreatorFilter('trusted')">🛡️ Trusted Creators</button>
+        <button class="tab-btn" onclick="switchTab('escrow')">💰 Pay a Creator</button>
+        <button class="tab-btn" onclick="switchTab('creators')">🌟 Find Creators</button>
+        <button class="tab-btn" onclick="switchTab('board')">📋 Listings</button>
+        <button class="tab-btn trusted-nav-btn" onclick="switchTab('trusted')">🛡️ Trusted Creators</button>
       </nav>
       <div class="header-right">
         <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙</button>
@@ -63,7 +63,6 @@
       <div id="tab-home" class="tab-panel active">
 
         <section class="landing-hero">
-          <div class="hero-tag">⚡ Built on ARC Network</div>
           <h1 class="hero-title">
             Pay Creators<br>
             <span class="accent">Only When They Deliver</span>
@@ -72,11 +71,6 @@
             Condition-based $USDC escrow for the creator economy.
             Set a goal, lock funds, release only when conditions are met.
           </p>
-          <div class="hero-actions">
-            <button onclick="switchTab('escrow')">💰 Pay a Creator</button>
-            <button class="btn-secondary" onclick="switchTab('creators')">🌟 Find Creators</button>
-            <button class="btn-secondary" onclick="switchTab('board')">📋 Post a Listing</button>
-          </div>
           <p class="hero-note">No trust required. Code enforces the deal.</p>
         </section>
 
@@ -150,6 +144,7 @@
           </div>
         </section>
 
+        <!-- Ready to get started -->
         <section class="cta-section">
           <h2 class="cta-title">Ready to get started?</h2>
           <p class="cta-sub">Join the first condition-based creator payment protocol on ARC Network.</p>
@@ -164,7 +159,7 @@
       <!-- ══ TAB: ESCROW ══ -->
       <div id="tab-escrow" class="tab-panel">
         <div class="page-header">
-          <h2>🔒 Escrow</h2>
+          <h2>💰 Pay a Creator</h2>
           <p>Lock USDC and release it only when the condition is met. Creator keeps 100% — platform fee paid by you.</p>
         </div>
         <div id="escrow-stats" class="stats-bar"></div>
@@ -320,10 +315,53 @@
         </div>
       </div>
 
-      <!-- ══ TAB: BOARD ══ -->
+      <!-- ══ TAB: TRUSTED CREATORS ══ -->
+      <div id="tab-trusted" class="tab-panel">
+        <div class="page-header">
+          <h2>🛡️ Trusted Creators</h2>
+          <p>Verified by performance. These creators have completed real escrows and delivered results.</p>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3>🛡️ Trusted Creator List</h3>
+            <div class="filter-row">
+              <select id="trusted-category-filter" onchange="loadTrustedCreators()">
+                <option value="">All Categories</option>
+                <option value="Micro Creator">Micro Creator</option>
+                <option value="Content Creator">Content Creator</option>
+                <option value="KOL">KOL</option>
+                <option value="Thread Writer">Thread Writer</option>
+                <option value="Developer">Developer</option>
+                <option value="Artist & Designer">Artist & Designer</option>
+                <option value="Educator">Educator</option>
+                <option value="Gaming">Gaming</option>
+                <option value="Meme & Community">Meme & Community</option>
+                <option value="DeFi Analyst">DeFi Analyst</option>
+                <option value="NFT Curator">NFT Curator</option>
+                <option value="Podcast & Video">Podcast & Video</option>
+                <option value="Instagram Creator">Instagram Creator</option>
+                <option value="TikTok Creator">TikTok Creator</option>
+                <option value="YouTube Creator">YouTube Creator</option>
+                <option value="Other">Other</option>
+              </select>
+              <select id="trusted-platform-filter" onchange="loadTrustedCreators()">
+                <option value="">All Platforms</option>
+                <option value="Twitter/X">Twitter / X</option>
+                <option value="Instagram">Instagram</option>
+                <option value="TikTok">TikTok</option>
+                <option value="YouTube">YouTube</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div id="trusted-list">Loading...</div>
+        </div>
+      </div>
+
+      <!-- ══ TAB: LISTINGS ══ -->
       <div id="tab-board" class="tab-panel">
         <div class="page-header">
-          <h2>📋 Board</h2>
+          <h2>📋 Listings</h2>
           <p>Projects looking for creators. Creators offering their services.</p>
         </div>
         <div class="card">
