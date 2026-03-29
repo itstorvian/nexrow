@@ -23,7 +23,8 @@
         <button class="tab-btn" onclick="switchTab('escrow')">💰 Pay a Creator</button>
         <button class="tab-btn" onclick="switchTab('creators')">🌟 Find Creators</button>
         <button class="tab-btn" onclick="switchTab('register')">➕ Register</button>
-        <button class="tab-btn" onclick="switchTab('board')">📋 Listings</button>
+        <button class="tab-btn" onclick="switchTab('post')">📋 Post Listing</button>
+        <button class="tab-btn" onclick="switchTab('listings')">📌 Active Listings</button>
       </nav>
       <div class="header-right">
         <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙</button>
@@ -53,7 +54,6 @@
 
       <!-- ══ TAB: HOME ══ -->
       <div id="tab-home" class="tab-panel active">
-
         <section class="landing-hero">
           <h1 class="hero-title">
             Pay Creators<br>
@@ -144,10 +144,9 @@
             </div>
           </div>
         </section>
-
       </div>
 
-      <!-- ══ TAB: PAY A CREATOR (ESCROW) ══ -->
+      <!-- ══ TAB: PAY A CREATOR ══ -->
       <div id="tab-escrow" class="tab-panel">
         <div class="page-header">
           <h2>💰 Pay a Creator</h2>
@@ -244,7 +243,7 @@
         </div>
       </div>
 
-      <!-- ══ TAB: REGISTER AS CREATOR ══ -->
+      <!-- ══ TAB: REGISTER ══ -->
       <div id="tab-register" class="tab-panel">
         <div class="page-header">
           <h2>➕ Register as Creator</h2>
@@ -314,14 +313,13 @@
         </div>
       </div>
 
-      <!-- ══ TAB: LISTINGS ══ -->
-      <div id="tab-board" class="tab-panel">
+      <!-- ══ TAB: POST LISTING ══ -->
+      <div id="tab-post" class="tab-panel">
         <div class="page-header">
-          <h2>📋 Listings</h2>
-          <p>Projects looking for creators. Creators offering their services.</p>
+          <h2>📋 Post a Listing</h2>
+          <p>Looking for a creator? Or offering your services? Post a listing.</p>
         </div>
         <div class="card">
-          <h3>Post a Listing</h3>
           <div class="form-grid">
             <div class="form-group">
               <label>I am a</label>
@@ -380,6 +378,14 @@
             </div>
           </div>
           <button id="listing-btn" onclick="postListing()">📋 Post Listing</button>
+        </div>
+      </div>
+
+      <!-- ══ TAB: ACTIVE LISTINGS ══ -->
+      <div id="tab-listings" class="tab-panel">
+        <div class="page-header">
+          <h2>📌 Active Listings</h2>
+          <p>Browse active project and creator listings.</p>
         </div>
         <div class="card">
           <div class="card-header">

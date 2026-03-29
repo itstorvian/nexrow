@@ -1,619 +1,438 @@
-// ─── Tema Toggle ──────────────────────────────────────────────────────────────
-function toggleTheme() {
-  const html = document.documentElement;
-  const current = html.getAttribute('data-theme');
-  const next = current === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  document.getElementById('theme-btn').innerText = next === 'dark' ? '🌙' : '☀️';
-  localStorage.setItem('nexrow-theme', next);
-}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexrow — Condition-Based Creator Payments</title>
+  <meta name="description" content="Pay creators only when they deliver. Condition-based USDC escrow on ARC Network." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+</head>
+<body>
 
-function initTheme() {
-  const saved = localStorage.getItem('nexrow-theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', saved);
-  const btn = document.getElementById('theme-btn');
-  if (btn) btn.innerText = saved === 'dark' ? '🌙' : '☀️';
-}
-
-initTheme();
-
-const USDC_CONTRACT   = '0x3600000000000000000000000000000000000000';
-const USDC_ABI = [
-  'function transfer(address to, uint256 amount) returns (bool)',
-  'function balanceOf(address account) view returns (uint256)'
-];
-const ARC_CHAIN_ID    = '0x4CE832';
-const API             = window.location.origin === 'http://127.0.0.1:5500' || window.location.origin === 'http://localhost:5500'
-  ? 'http://localhost:3001'
-  : window.location.origin;
-const PLATFORM_WALLET = '0xec0B6d183c4d09cf40d192c0eB801A32DDcdC114';
-
-let currentAddress  = null;
-let creatorFilter   = 'all';
-const escrowCache   = {};
-
-// ─── Tab Navigation ───────────────────────────────────────────────────────────
-function switchTab(tab) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById(`tab-${tab}`).classList.add('active');
-  document.querySelectorAll('.tab-btn').forEach(b => {
-    if (b.getAttribute('onclick') === `switchTab('${tab}')`) b.classList.add('active');
-  });
-  if (tab === 'home')     loadHome();
-  if (tab === 'escrow')   loadEscrows();
-  if (tab === 'creators') loadCreators();
-  if (tab === 'register') {}
-  if (tab === 'board')    loadListings();
-}
-
-function updateConditionHint() {
-  const platform  = document.getElementById('escrow-platform')?.value;
-  const hint      = document.getElementById('condition-hint');
-  const condition = document.getElementById('condition');
-  if (!hint || !condition) return;
-  if (platform === 'twitter') {
-    hint.innerText        = 'Twitter/X: likes > 100, followers >= 500, views < 10000';
-    condition.placeholder = 'likes > 100';
-    condition.value       = '';
-  } else {
-    hint.innerText        = 'Instagram / TikTok / YouTube: type "manual"';
-    condition.placeholder = 'manual';
-    condition.value       = 'manual';
-  }
-}
-
-function updateFeePreview() {
-  const amount  = parseFloat(document.getElementById('amount')?.value || 0);
-  const preview = document.getElementById('fee-preview');
-  if (!preview) return;
-  if (!amount || amount <= 0) { preview.innerText = ''; return; }
-  const fee   = parseFloat((amount * 0.02).toFixed(6));
-  const total = parseFloat((amount + fee).toFixed(6));
-  preview.innerHTML = `Creator receives: <b>${amount} USDC</b> &nbsp;|&nbsp; Platform fee: <b>${fee} USDC</b> (2%) &nbsp;|&nbsp; You pay: <b>${total} USDC</b>`;
-}
-
-// ─── Wallet ───────────────────────────────────────────────────────────────────
-async function connectWallet() {
-  if (!window.ethereum) {
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    if (isMobile) {
-      window.open(`https://metamask.app.link/dapp/${window.location.host}`, '_blank');
-      return;
-    }
-    return alert('Please install MetaMask!');
-  }
-  await window.ethereum.request({ method: 'eth_requestAccounts' });
-  const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-  if (chainId !== ARC_CHAIN_ID) {
-    try {
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: ARC_CHAIN_ID }],
-      });
-    } catch {
-      alert('Please switch to ARC Testnet in MetaMask.');
-      return;
-    }
-  }
-  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-  await setConnected(accounts[0]);
-  return accounts[0];
-}
-
-async function setConnected(address) {
-  currentAddress = address;
-  const short = `${address.slice(0, 6)}...${address.slice(-4)}`;
-  document.getElementById('wallet-address').innerText = short;
-  document.getElementById('wallet-btn').innerText     = '✅ Connected';
-  document.getElementById('disconnect-btn').style.display = 'inline-block';
-  await updateBalance(address);
-  loadHome();
-}
-
-function disconnectWallet() {
-  currentAddress = null;
-  document.getElementById('wallet-btn').innerText         = 'Connect';
-  document.getElementById('wallet-address').innerText     = '';
-  document.getElementById('wallet-balance').innerText     = '';
-  document.getElementById('disconnect-btn').style.display = 'none';
-}
-
-async function updateBalance(address) {
-  try {
-    const provider  = new ethers.BrowserProvider(window.ethereum);
-    const usdc      = new ethers.Contract(USDC_CONTRACT, USDC_ABI, provider);
-    const bal       = await usdc.balanceOf(address);
-    const formatted = parseFloat(ethers.formatUnits(bal, 6)).toFixed(2);
-    document.getElementById('wallet-balance').innerText = `${formatted} USDC`;
-  } catch {
-    document.getElementById('wallet-balance').innerText = '';
-  }
-}
-
-window.addEventListener('load', async () => {
-  if (window.ethereum) {
-    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-    if (accounts.length > 0) await setConnected(accounts[0]);
-    window.ethereum.on('accountsChanged', async (accounts) => {
-      if (accounts.length === 0) disconnectWallet();
-      else await setConnected(accounts[0]);
-    });
-    window.ethereum.on('chainChanged', () => window.location.reload());
-  }
-  loadHome();
-});
-
-// ─── HOME ─────────────────────────────────────────────────────────────────────
-async function loadHome() {
-  loadHomeStats();
-}
-
-async function loadHomeStats() {
-  try {
-    const res  = await fetch(`${API}/stats`);
-    const data = await res.json();
-    const el   = document.getElementById('home-stats');
-    if (!el) return;
-    el.innerHTML = `
-      <div class="stat-card">
-        <span class="stat-value">${data.total}</span>
-        <span class="stat-label">Total Escrows</span>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <span class="logo">⚡ Nexrow</span>
+        <span class="network-badge">ARC Testnet</span>
       </div>
-      <div class="stat-card">
-        <span class="stat-value">${data.volumeUSDC}</span>
-        <span class="stat-label">USDC Volume</span>
+      <nav class="tab-nav">
+        <button class="tab-btn active" onclick="switchTab('home')">Home</button>
+        <button class="tab-btn" onclick="switchTab('escrow')">💰 Pay a Creator</button>
+        <button class="tab-btn" onclick="switchTab('creators')">🌟 Find Creators</button>
+        <button class="tab-btn" onclick="switchTab('register')">➕ Register</button>
+        <button class="tab-btn" onclick="switchTab('post')">📋 Post Listing</button>
+        <button class="tab-btn" onclick="switchTab('listings')">📌 Active Listings</button>
+      </nav>
+      <div class="header-right">
+        <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn">🌙</button>
+        <span id="wallet-balance" class="wallet-balance"></span>
+        <span id="wallet-address" class="wallet-address"></span>
+        <button onclick="connectWallet()" id="wallet-btn">Connect</button>
+        <button onclick="disconnectWallet()" id="disconnect-btn" class="btn-outline-danger tooltip-btn" style="display:none;">
+          ⛔<span class="tooltip-text">Disconnect</span>
+        </button>
       </div>
-      <div class="stat-card">
-        <span class="stat-value">${data.paid}</span>
-        <span class="stat-label">Paid Out</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-value">${data.creators}</span>
-        <span class="stat-label">Creators</span>
-      </div>
-      <div class="stat-card">
-        <span class="stat-value">${data.trusted || 0}</span>
-        <span class="stat-label">🛡️ Trusted</span>
-      </div>
-    `;
-  } catch {}
-}
-
-// ─── ESCROW ───────────────────────────────────────────────────────────────────
-async function deposit() {
-  const creator       = document.getElementById('creator').value.trim();
-  const condition     = document.getElementById('condition').value.trim();
-  const creatorWallet = document.getElementById('creator-wallet').value.trim();
-  const amount        = document.getElementById('amount').value.trim();
-
-  if (!creator || !condition || !creatorWallet || !amount)
-    return showToast('Please fill in all fields', 'error');
-  if (!ethers.isAddress(creatorWallet))
-    return showToast('Invalid creator wallet address', 'error');
-  if (parseFloat(amount) <= 0)
-    return showToast('Amount must be greater than 0', 'error');
-  if (!currentAddress) {
-    const addr = await connectWallet();
-    if (!addr) return;
-  }
-
-  const baseAmount = parseFloat(amount);
-  const fee        = parseFloat((baseAmount * 0.02).toFixed(6));
-  const total      = parseFloat((baseAmount + fee).toFixed(6));
-
-  const confirmed = window.confirm(
-    `Deposit summary:\n\nCreator receives: ${baseAmount} USDC\nPlatform fee (2%): ${fee} USDC\nTotal you pay: ${total} USDC\n\nThis will send 2 transactions.`
-  );
-  if (!confirmed) return;
-
-  setLoading('deposit-btn', true, 'Sending...');
-  try {
-    const provider     = new ethers.BrowserProvider(window.ethereum);
-    const signer       = await provider.getSigner();
-    const usdc         = new ethers.Contract(USDC_CONTRACT, USDC_ABI, signer);
-
-    showToast('TX 1/2: Sending to creator...', 'info');
-    const tx1 = await usdc.transfer(creatorWallet, ethers.parseUnits(baseAmount.toString(), 6));
-    await tx1.wait();
-
-    showToast('TX 2/2: Sending platform fee...', 'info');
-    const tx2 = await usdc.transfer(PLATFORM_WALLET, ethers.parseUnits(fee.toString(), 6));
-    await tx2.wait();
-
-    const res  = await fetch(`${API}/deposit`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ creator, condition, amount: baseAmount, txHash: tx1.hash, creatorWallet, payerWallet: currentAddress }),
-    });
-    const data = await res.json();
-    if (!res.ok) return showToast(data.error || 'Server error', 'error');
-
-    showToast(`✅ Escrow #${data.escrow.id} created!`, 'success');
-    clearForm(['creator', 'condition', 'creator-wallet', 'amount']);
-    const fp = document.getElementById('fee-preview');
-    if (fp) fp.innerText = '';
-    await updateBalance(currentAddress);
-    loadEscrows();
-  } catch (err) {
-    showToast(err.message, 'error');
-  } finally {
-    setLoading('deposit-btn', false, '💰 Pay a Creator');
-  }
-}
-
-async function checkCondition(id) {
-  const btn = document.getElementById(`check-btn-${id}`);
-  if (btn) { btn.disabled = true; btn.innerText = 'Checking...'; }
-  try {
-    const res  = await fetch(`${API}/check/${id}`, { method: 'POST' });
-    const data = await res.json();
-    if (!res.ok) return showToast(data.error || 'Error', 'error');
-    if (data.result === 'condition_met') {
-      showToast('✅ Condition met! Click Mark as Paid.', 'success');
-    } else {
-      const s = data.stats;
-      showToast(`❌ Not met — 👍 ${s.likes} | 👥 ${s.followers} | 👁 ${s.views}${s.source === 'mock' ? ' (mock)' : ''}`, 'info');
-    }
-    loadEscrows();
-  } catch (err) {
-    showToast(err.message, 'error');
-  } finally {
-    if (btn) { btn.disabled = false; btn.innerText = '🔍 Check'; }
-  }
-}
-
-async function approveManual(id) {
-  if (!currentAddress) return showToast('Connect wallet to approve', 'error');
-  if (!window.confirm('Manually approve this escrow?')) return;
-  try {
-    const res  = await fetch(`${API}/approve/${id}`, { method: 'POST' });
-    const data = await res.json();
-    if (!res.ok) return showToast(data.error || 'Error', 'error');
-    showToast('✅ Approved! Click Mark as Paid.', 'success');
-    loadEscrows();
-  } catch (err) {
-    showToast(err.message, 'error');
-  }
-}
-
-async function releaseFromCache(id) {
-  const e = escrowCache[id];
-  if (!e) return showToast('Refresh the page and try again', 'error');
-  if (!window.confirm(`Confirm release of escrow #${id}?\nCreator already received ${e.amount} USDC at deposit.`)) return;
-  try {
-    await fetch(`${API}/release/${id}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ releaseTxHash: e.txHash }),
-    });
-    showToast(`✅ Escrow #${id} marked as paid!`, 'success');
-    loadEscrows();
-  } catch (err) {
-    showToast(err.message, 'error');
-  }
-}
-
-async function refund(id) {
-  if (!currentAddress) return showToast('Connect wallet to refund', 'error');
-  const res    = await fetch(`${API}/escrows/${id}`);
-  const escrow = await res.json();
-  if (escrow.payerWallet?.toLowerCase() !== currentAddress.toLowerCase())
-    return showToast('Only the payer can request a refund', 'error');
-  if (!window.confirm(`Request refund of ${escrow.amount} USDC?`)) return;
-  try {
-    const r    = await fetch(`${API}/refund/${id}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refundTxHash: null }),
-    });
-    const data = await r.json();
-    if (!r.ok) return showToast(data.error, 'error');
-    showToast('↩️ Refund requested.', 'info');
-    loadEscrows();
-  } catch (err) {
-    showToast(err.message, 'error');
-  }
-}
-
-async function loadEscrows() {
-  const el = document.getElementById('escrow-list');
-  if (!el) return;
-  el.innerHTML = '<p class="loading">Loading...</p>';
-  try {
-    const url  = currentAddress ? `${API}/escrows?wallet=${currentAddress}` : `${API}/escrows`;
-    const res  = await fetch(url);
-    const list = await res.json();
-    loadEscrowStats();
-    if (!list.length) { el.innerHTML = '<p class="empty">No escrows yet.</p>'; return; }
-    el.innerHTML = list.map(e => renderEscrow(e)).join('');
-  } catch (err) {
-    el.innerHTML = `<p class="empty">Failed to load: ${err.message}</p>`;
-  }
-}
-
-async function loadEscrowStats() {
-  try {
-    const res  = await fetch(`${API}/stats`);
-    const data = await res.json();
-    const el   = document.getElementById('escrow-stats');
-    if (el) el.innerHTML = `
-      <span>📦 ${data.total} escrows</span>
-      <span>⏳ ${data.pending} pending</span>
-      <span>💰 ${data.volumeUSDC} USDC volume</span>
-      <span>🏦 ${data.feesUSDC} USDC fees</span>
-    `;
-  } catch {}
-}
-
-function renderEscrow(e) {
-  escrowCache[e.id] = e;
-  const statusLabel = {
-    pending: '⏳ Pending', condition_met: '✅ Condition Met',
-    paid: '💰 Paid', refunded: '↩️ Refunded'
-  }[e.status] || e.status;
-
-  const shortHash   = h => h ? `${h.slice(0, 10)}...${h.slice(-6)}` : '—';
-  const explorerUrl = h => `https://testnet.arcscan.net/tx/${h}`;
-  const isManual    = e.conditionType === 'manual';
-  const isPayer     = currentAddress && e.payerWallet?.toLowerCase() === currentAddress.toLowerCase();
-
-  return `
-    <div class="escrow-item status-border-${e.status}">
-      <div class="escrow-header">
-        <span class="escrow-creator">${e.creator}${isManual ? '<span class="badge-manual">Manual</span>' : ''}</span>
-        <span class="badge badge-${e.status}">${statusLabel}</span>
-      </div>
-      <div class="escrow-details">
-        <div class="detail-row"><span class="label">Creator gets</span><span class="value">${e.amount} USDC</span></div>
-        <div class="detail-row"><span class="label">Platform fee</span><span class="value">${e.fee} USDC (paid by project)</span></div>
-        <div class="detail-row"><span class="label">Condition</span><code>${e.condition}</code></div>
-        ${e.creatorWallet ? `<div class="detail-row"><span class="label">Creator wallet</span><span class="value mono">${e.creatorWallet.slice(0,6)}...${e.creatorWallet.slice(-4)}</span></div>` : ''}
-        ${e.txHash ? `<div class="detail-row"><span class="label">Deposit TX</span><a href="${explorerUrl(e.txHash)}" target="_blank" class="tx-link">${shortHash(e.txHash)}</a></div>` : ''}
-        ${e.releaseTxHash ? `<div class="detail-row"><span class="label">Release TX</span><a href="${explorerUrl(e.releaseTxHash)}" target="_blank" class="tx-link">${shortHash(e.releaseTxHash)}</a></div>` : ''}
-        ${e.lastStats ? `<div class="detail-row"><span class="label">Last check</span><span class="value">👍 ${e.lastStats.likes} 👥 ${e.lastStats.followers} 👁 ${e.lastStats.views}${e.lastStats.source === 'mock' ? ' <em>(mock)</em>' : ''}</span></div>` : ''}
-        <div class="detail-row"><span class="label">Created</span><span class="value">${new Date(e.createdAt).toLocaleString()}</span></div>
-      </div>
-      ${e.status === 'pending' ? `
-        <div class="escrow-actions">
-          ${isManual
-            ? (isPayer ? `<button onclick="approveManual('${e.id}')">✅ Approve</button>` : '')
-            : `<button id="check-btn-${e.id}" onclick="checkCondition('${e.id}')">🔍 Check</button>`
-          }
-          <button class="btn-danger" onclick="refund('${e.id}')">↩️ Refund</button>
-        </div>` : ''}
-      ${e.status === 'condition_met' ? `
-        <div class="escrow-actions">
-          <button onclick="releaseFromCache('${e.id}')">✅ Mark as Paid</button>
-          <button class="btn-danger" onclick="refund('${e.id}')">↩️ Refund</button>
-        </div>` : ''}
     </div>
-  `;
-}
+  </header>
 
-// ─── CREATORS ─────────────────────────────────────────────────────────────────
-function getStars(completedEscrows) {
-  if (completedEscrows === 0) return '<span style="color:var(--muted);font-size:12px;">No escrows yet</span>';
-  const stars = Math.min(5, Math.floor(completedEscrows / 2) + 1);
-  return '⭐'.repeat(stars) + `<span style="font-size:11px;color:var(--muted);margin-left:4px;">(${completedEscrows} completed)</span>`;
-}
+  <div class="page-wrapper">
 
-function setCreatorFilter(filter) {
-  creatorFilter = filter;
-  document.getElementById('filter-all')?.classList.toggle('active-filter', filter === 'all');
-  document.getElementById('filter-trusted')?.classList.toggle('active-filter', filter === 'trusted');
-  loadCreators();
-}
+    <aside class="ad-sidebar ad-left">
+      <div class="ad-slot">
+        <span class="ad-label">Sponsored</span>
+        <div class="ad-logo">🚀</div>
+        <div class="ad-title">Advertise on Nexrow</div>
+        <div class="ad-desc">Reach web3 creators & projects</div>
+        <div class="ad-cta">DM @itstorvian</div>
+      </div>
+    </aside>
 
-async function registerCreator() {
-  if (!currentAddress) {
-    const addr = await connectWallet();
-    if (!addr) return;
-  }
+    <main class="main-content">
 
-  const twitter       = document.getElementById('reg-twitter').value.trim();
-  const category      = document.getElementById('reg-category').value;
-  const platform      = document.getElementById('reg-platform').value;
-  const pricing       = document.getElementById('reg-pricing').value.trim();
-  const bio           = document.getElementById('reg-bio').value.trim();
-  const followerRange = document.getElementById('reg-follower-range').value;
+      <!-- ══ TAB: HOME ══ -->
+      <div id="tab-home" class="tab-panel active">
+        <section class="landing-hero">
+          <h1 class="hero-title">
+            Pay Creators<br>
+            <span class="accent">Only When They Deliver</span>
+          </h1>
+          <p class="hero-sub">
+            Condition-based $USDC escrow for the creator economy.
+            Set a goal, lock funds, release only when conditions are met.
+          </p>
+          <p class="hero-note">No trust required. Code enforces the deal.</p>
+        </section>
 
-  if (!twitter || !category) return showToast('Handle and category are required', 'error');
-
-  setLoading('register-btn', true, 'Registering...');
-  try {
-    const res  = await fetch(`${API}/creators/register`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ wallet: currentAddress, twitter, category, platform, pricing, bio, followerRange }),
-    });
-    const data = await res.json();
-    if (!res.ok) return showToast(data.error || 'Error', 'error');
-    showToast('✅ Registered as creator!', 'success');
-    clearForm(['reg-twitter', 'reg-pricing', 'reg-bio']);
-    document.getElementById('reg-category').value       = '';
-    document.getElementById('reg-platform').value       = 'Twitter/X';
-    document.getElementById('reg-follower-range').value = '';
-    loadCreators();
-    loadHome();
-  } catch (err) {
-    showToast(err.message, 'error');
-  } finally {
-    setLoading('register-btn', false, '🌟 Register as Creator');
-  }
-}
-
-async function loadCreators() {
-  const el = document.getElementById('creator-list');
-  if (!el) return;
-
-  document.getElementById('filter-all')?.classList.toggle('active-filter', creatorFilter === 'all');
-  document.getElementById('filter-trusted')?.classList.toggle('active-filter', creatorFilter === 'trusted');
-
-  el.innerHTML = '<p class="loading">Loading...</p>';
-  try {
-    const category = document.getElementById('creator-category-filter')?.value || '';
-    const platform = document.getElementById('creator-platform-filter')?.value || '';
-    const params   = [];
-    if (category) params.push(`category=${encodeURIComponent(category)}`);
-    if (platform) params.push(`platform=${encodeURIComponent(platform)}`);
-    if (creatorFilter === 'trusted') params.push('trusted=true');
-    const url = `${API}/creators${params.length ? '?' + params.join('&') : ''}`;
-
-    const res  = await fetch(url);
-    const list = await res.json();
-
-    if (!list.length) {
-      el.innerHTML = creatorFilter === 'trusted'
-        ? '<p class="empty">No trusted creators yet. Complete escrows to earn trust!</p>'
-        : '<p class="empty">No creators yet. Be the first!</p>';
-      return;
-    }
-
-    el.innerHTML = list.map((c, i) => `
-      <div class="creator-card">
-        <div class="creator-rank">#${i + 1}</div>
-        <div class="creator-info">
-          <div class="creator-top">
-            <b class="creator-handle">${c.twitter}</b>
-            <span class="category-tag">${c.category}</span>
-            <span class="platform-tag">${c.platform || 'Twitter/X'}</span>
-            ${c.followerRange ? `<span class="category-tag">${c.followerRange}</span>` : ''}
-            ${c.trusted ? '<span class="trusted-badge">🛡️ Trusted</span>' : ''}
+        <section class="cta-section">
+          <h2 class="cta-title">Ready to get started?</h2>
+          <p class="cta-sub">Join the first condition-based creator payment protocol on ARC Network.</p>
+          <div class="cta-actions">
+            <button onclick="switchTab('escrow')">💰 Pay a Creator</button>
+            <button class="btn-secondary" onclick="switchTab('register')">🌟 Register as Creator</button>
           </div>
-          <div style="margin:6px 0 8px;">${getStars(c.completedEscrows)}</div>
-          ${c.bio ? `<p class="creator-bio">${c.bio}</p>` : ''}
-          ${c.pricing ? `<p class="creator-pricing">💰 ${c.pricing}</p>` : ''}
-          <div class="creator-stats">
-            <span>💵 ${c.totalEarned} USDC earned</span>
-            <span>📅 Since ${new Date(c.registeredAt).toLocaleDateString()}</span>
+        </section>
+
+        <div id="home-stats" class="stats-grid"></div>
+
+        <section class="how-it-works">
+          <h2 class="section-title">How It Works</h2>
+          <p class="section-sub">Three steps. No middlemen. No trust required.</p>
+          <div class="steps-grid">
+            <div class="step-card">
+              <div class="step-number">01</div>
+              <div class="step-icon">🔒</div>
+              <div class="step-title">Lock USDC</div>
+              <div class="step-desc">Project deposits USDC into escrow. Funds are locked until conditions are verified.</div>
+            </div>
+            <div class="step-card">
+              <div class="step-number">02</div>
+              <div class="step-icon">🎯</div>
+              <div class="step-title">Set Condition</div>
+              <div class="step-desc">Define measurable goals: likes, followers, views — or manual approval for any platform.</div>
+            </div>
+            <div class="step-card">
+              <div class="step-number">03</div>
+              <div class="step-icon">✅</div>
+              <div class="step-title">Verify & Release</div>
+              <div class="step-desc">Condition met? Creator gets full payment. Not met? Funds return to the project.</div>
+            </div>
+            <div class="step-card">
+              <div class="step-number">04</div>
+              <div class="step-icon">🏆</div>
+              <div class="step-title">Build Trust</div>
+              <div class="step-desc">Every completed escrow builds your creator score. Top performers earn Trusted status.</div>
+            </div>
           </div>
+        </section>
+
+        <section class="why-nexrow">
+          <h2 class="section-title">Why Nexrow?</h2>
+          <p class="section-sub">Solving the broken creator payment model.</p>
+          <div class="features-grid">
+            <div class="feature-card">
+              <div class="feature-icon">💵</div>
+              <div class="feature-title">$USDC — Not Volatile Tokens</div>
+              <div class="feature-desc">Creators get paid in stablecoins. No dump risk. No claim delays. Real value, always.</div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">🌐</div>
+              <div class="feature-title">Any Platform</div>
+              <div class="feature-desc">Twitter/X, Instagram, TikTok, YouTube — we support all platforms via automatic or manual verification.</div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">⚡</div>
+              <div class="feature-title">Low Fees on ARC</div>
+              <div class="feature-desc">Creator keeps 100% of agreed amount. 2% platform fee paid by the project. Fair for everyone.</div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">🛡️</div>
+              <div class="feature-title">Trusted Creator System</div>
+              <div class="feature-desc">Performance-based reputation. Creators who deliver get featured. Bad actors can't fake their way in.</div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">🤝</div>
+              <div class="feature-title">No Trust Required</div>
+              <div class="feature-desc">Projects don't need to trust creators. Creators don't need to trust projects. The protocol enforces the deal.</div>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">📋</div>
+              <div class="feature-title">Open Marketplace</div>
+              <div class="feature-desc">Projects find creators. Creators find projects. Browse listings, connect, and get to work.</div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- ══ TAB: PAY A CREATOR ══ -->
+      <div id="tab-escrow" class="tab-panel">
+        <div class="page-header">
+          <h2>💰 Pay a Creator</h2>
+          <p>Lock USDC and release it only when the condition is met. Creator keeps 100% — platform fee paid by you.</p>
+        </div>
+        <div id="escrow-stats" class="stats-bar"></div>
+        <div class="card">
+          <h3>New Escrow</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Creator Username</label>
+              <input id="creator" type="text" placeholder="@alice" />
+            </div>
+            <div class="form-group">
+              <label>Platform</label>
+              <select id="escrow-platform" onchange="updateConditionHint()">
+                <option value="twitter">Twitter / X</option>
+                <option value="instagram">Instagram</option>
+                <option value="tiktok">TikTok</option>
+                <option value="youtube">YouTube</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group full-width">
+              <label>Condition</label>
+              <input id="condition" type="text" placeholder="likes > 100" />
+              <span class="hint" id="condition-hint">Twitter/X: likes > 100, followers >= 500. Other platforms: type "manual"</span>
+            </div>
+            <div class="form-group">
+              <label>Creator Wallet</label>
+              <input id="creator-wallet" type="text" placeholder="0x..." />
+            </div>
+            <div class="form-group">
+              <label>Amount for Creator (USDC)</label>
+              <input id="amount" type="number" placeholder="100" min="0.01" step="0.01" oninput="updateFeePreview()" />
+            </div>
+            <div class="form-group full-width">
+              <div id="fee-preview" class="fee-preview"></div>
+            </div>
+          </div>
+          <button id="deposit-btn" onclick="deposit()">💰 Pay a Creator</button>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3>My Escrows</h3>
+            <button class="btn-sm" onclick="loadEscrows()">🔄 Refresh</button>
+          </div>
+          <div id="escrow-list">Loading...</div>
         </div>
       </div>
-    `).join('');
-  } catch (err) {
-    el.innerHTML = `<p class="empty">Failed to load: ${err.message}</p>`;
-  }
-}
 
-// ─── BOARD ────────────────────────────────────────────────────────────────────
-async function postListing() {
-  if (!currentAddress) {
-    const addr = await connectWallet();
-    if (!addr) return;
-  }
-
-  const type        = document.getElementById('listing-type').value;
-  const category    = document.getElementById('listing-category').value;
-  const platform    = document.getElementById('listing-platform').value;
-  const title       = document.getElementById('listing-title').value.trim();
-  const description = document.getElementById('listing-desc').value.trim();
-  const budget      = document.getElementById('listing-budget').value.trim();
-  const twitter     = document.getElementById('listing-twitter').value.trim();
-
-  if (!title || !budget || !category) return showToast('Title, budget and category are required', 'error');
-
-  setLoading('listing-btn', true, 'Posting...');
-  try {
-    const res  = await fetch(`${API}/listings`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ wallet: currentAddress, type, title, description, budget, category, platform, twitter }),
-    });
-    const data = await res.json();
-    if (!res.ok) return showToast(data.error || 'Error', 'error');
-    showToast('✅ Listing posted!', 'success');
-    clearForm(['listing-title', 'listing-desc', 'listing-budget', 'listing-twitter']);
-    loadListings();
-    loadHome();
-  } catch (err) {
-    showToast(err.message, 'error');
-  } finally {
-    setLoading('listing-btn', false, '📋 Post Listing');
-  }
-}
-
-async function loadListings() {
-  const el = document.getElementById('listing-list');
-  if (!el) return;
-  el.innerHTML = '<p class="loading">Loading...</p>';
-  try {
-    const type     = document.getElementById('board-type-filter')?.value     || '';
-    const category = document.getElementById('board-category-filter')?.value || '';
-    const platform = document.getElementById('board-platform-filter')?.value || '';
-    const params   = [];
-    if (type)     params.push(`type=${type}`);
-    if (category) params.push(`category=${encodeURIComponent(category)}`);
-    if (platform) params.push(`platform=${encodeURIComponent(platform)}`);
-    const url = `${API}/listings${params.length ? '?' + params.join('&') : ''}`;
-
-    const res  = await fetch(url);
-    const list = await res.json();
-    if (!list.length) { el.innerHTML = '<p class="empty">No listings yet. Post the first one!</p>'; return; }
-
-    el.innerHTML = list.map(l => `
-      <div class="listing-card listing-${l.type}">
-        <div class="listing-header">
-          <div class="listing-meta">
-            <span class="listing-type-badge ${l.type}">${l.type === 'project' ? '🏢 Project' : '🌟 Creator'}</span>
-            <span class="category-tag">${l.category}</span>
-            ${l.platform ? `<span class="platform-tag">${l.platform}</span>` : ''}
-          </div>
-          <span class="budget-badge">${l.budget} USDC</span>
+      <!-- ══ TAB: FIND CREATORS ══ -->
+      <div id="tab-creators" class="tab-panel">
+        <div class="page-header">
+          <h2>🌟 Find Creators</h2>
+          <p>Discover talented creators on Nexrow. Filter by category, platform or trust level.</p>
         </div>
-        <h4 class="listing-title">${l.title}</h4>
-        ${l.description ? `<p class="listing-desc">${l.description}</p>` : ''}
-        <div class="listing-footer">
-          ${l.twitter ? `<span class="listing-twitter">@${l.twitter.replace('@','')}</span>` : ''}
-          <span class="listing-date">${new Date(l.createdAt).toLocaleDateString()}</span>
-          ${currentAddress && l.wallet === currentAddress.toLowerCase() ? `
-            <button class="btn-sm btn-close" onclick="closeListing('${l.id}')">Close</button>
-          ` : `
-            <button class="btn-sm" onclick="contactListing('${l.twitter || ''}')">Contact</button>
-          `}
+        <div class="card">
+          <div class="card-header">
+            <h3>🏆 Leaderboard</h3>
+            <div class="filter-row">
+              <button class="btn-sm" id="filter-all" onclick="setCreatorFilter('all')">All</button>
+              <button class="btn-sm" id="filter-trusted" onclick="setCreatorFilter('trusted')">🛡️ Trusted</button>
+              <select id="creator-category-filter" onchange="loadCreators()">
+                <option value="">All Categories</option>
+                <option value="Micro Creator">Micro Creator</option>
+                <option value="Content Creator">Content Creator</option>
+                <option value="KOL">KOL</option>
+                <option value="Thread Writer">Thread Writer</option>
+                <option value="Developer">Developer</option>
+                <option value="Artist & Designer">Artist & Designer</option>
+                <option value="Educator">Educator</option>
+                <option value="Gaming">Gaming</option>
+                <option value="Meme & Community">Meme & Community</option>
+                <option value="DeFi Analyst">DeFi Analyst</option>
+                <option value="NFT Curator">NFT Curator</option>
+                <option value="Podcast & Video">Podcast & Video</option>
+                <option value="Instagram Creator">Instagram Creator</option>
+                <option value="TikTok Creator">TikTok Creator</option>
+                <option value="YouTube Creator">YouTube Creator</option>
+                <option value="Other">Other</option>
+              </select>
+              <select id="creator-platform-filter" onchange="loadCreators()">
+                <option value="">All Platforms</option>
+                <option value="Twitter/X">Twitter / X</option>
+                <option value="Instagram">Instagram</option>
+                <option value="TikTok">TikTok</option>
+                <option value="YouTube">YouTube</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <div id="creator-list">Loading...</div>
         </div>
       </div>
-    `).join('');
-  } catch (err) {
-    el.innerHTML = `<p class="empty">Failed to load: ${err.message}</p>`;
-  }
-}
 
-async function closeListing(id) {
-  if (!window.confirm('Close this listing?')) return;
-  await fetch(`${API}/listings/${id}/close`, { method: 'POST' });
-  showToast('Listing closed.', 'info');
-  loadListings();
-}
+      <!-- ══ TAB: REGISTER ══ -->
+      <div id="tab-register" class="tab-panel">
+        <div class="page-header">
+          <h2>➕ Register as Creator</h2>
+          <p>Join Nexrow as a creator. Get discovered by projects and earn USDC.</p>
+        </div>
+        <div class="card">
+          <h3>Become a Creator</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Handle / Username</label>
+              <input id="reg-twitter" type="text" placeholder="@yourhandle" />
+            </div>
+            <div class="form-group">
+              <label>Main Platform</label>
+              <select id="reg-platform">
+                <option value="Twitter/X">Twitter / X</option>
+                <option value="Instagram">Instagram</option>
+                <option value="TikTok">TikTok</option>
+                <option value="YouTube">YouTube</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Category</label>
+              <select id="reg-category">
+                <option value="">Select category</option>
+                <option value="Micro Creator">Micro Creator (1K–10K)</option>
+                <option value="Content Creator">Content Creator (10K–100K)</option>
+                <option value="KOL">KOL (100K+)</option>
+                <option value="Thread Writer">Thread Writer</option>
+                <option value="Developer">Developer</option>
+                <option value="Artist & Designer">Artist & Designer</option>
+                <option value="Educator">Educator</option>
+                <option value="Gaming">Gaming</option>
+                <option value="Meme & Community">Meme & Community</option>
+                <option value="DeFi Analyst">DeFi Analyst</option>
+                <option value="NFT Curator">NFT Curator</option>
+                <option value="Podcast & Video">Podcast & Video</option>
+                <option value="Instagram Creator">Instagram Creator</option>
+                <option value="TikTok Creator">TikTok Creator</option>
+                <option value="YouTube Creator">YouTube Creator</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Follower Range</label>
+              <select id="reg-follower-range">
+                <option value="">Select range</option>
+                <option value="< 1K">Under 1K</option>
+                <option value="1K–10K">1K – 10K</option>
+                <option value="10K–50K">10K – 50K</option>
+                <option value="50K–100K">50K – 100K</option>
+                <option value="100K–500K">100K – 500K</option>
+                <option value="500K+">500K+</option>
+              </select>
+            </div>
+            <div class="form-group full-width">
+              <label>Pricing</label>
+              <input id="reg-pricing" type="text" placeholder="e.g. 1 Post = 50 USDC, Story = 20 USDC" />
+            </div>
+            <div class="form-group full-width">
+              <label>Bio</label>
+              <textarea id="reg-bio" placeholder="Tell projects about yourself..."></textarea>
+            </div>
+          </div>
+          <button id="register-btn" onclick="registerCreator()">🌟 Register as Creator</button>
+        </div>
+      </div>
 
-function contactListing(twitter) {
-  if (!twitter) return showToast('No handle provided', 'info');
-  window.open(`https://twitter.com/${twitter.replace('@', '')}`, '_blank');
-}
+      <!-- ══ TAB: POST LISTING ══ -->
+      <div id="tab-post" class="tab-panel">
+        <div class="page-header">
+          <h2>📋 Post a Listing</h2>
+          <p>Looking for a creator? Or offering your services? Post a listing.</p>
+        </div>
+        <div class="card">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>I am a</label>
+              <select id="listing-type">
+                <option value="project">Project — looking for creator</option>
+                <option value="creator">Creator — offering my services</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Category</label>
+              <select id="listing-category">
+                <option value="Micro Creator">Micro Creator</option>
+                <option value="Content Creator">Content Creator</option>
+                <option value="KOL">KOL</option>
+                <option value="Thread Writer">Thread Writer</option>
+                <option value="Developer">Developer</option>
+                <option value="Artist & Designer">Artist & Designer</option>
+                <option value="Educator">Educator</option>
+                <option value="Gaming">Gaming</option>
+                <option value="Meme & Community">Meme & Community</option>
+                <option value="DeFi Analyst">DeFi Analyst</option>
+                <option value="NFT Curator">NFT Curator</option>
+                <option value="Podcast & Video">Podcast & Video</option>
+                <option value="Instagram Creator">Instagram Creator</option>
+                <option value="TikTok Creator">TikTok Creator</option>
+                <option value="YouTube Creator">YouTube Creator</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Platform</label>
+              <select id="listing-platform">
+                <option value="">Any Platform</option>
+                <option value="Twitter/X">Twitter / X</option>
+                <option value="Instagram">Instagram</option>
+                <option value="TikTok">TikTok</option>
+                <option value="YouTube">YouTube</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Budget / Rate (USDC)</label>
+              <input id="listing-budget" type="number" placeholder="500" min="1" />
+            </div>
+            <div class="form-group full-width">
+              <label>Title</label>
+              <input id="listing-title" type="text" placeholder="e.g. Need Instagram Creator for token launch — 500 USDC" />
+            </div>
+            <div class="form-group full-width">
+              <label>Description</label>
+              <textarea id="listing-desc" placeholder="Details about the campaign, requirements, timeline..."></textarea>
+            </div>
+            <div class="form-group">
+              <label>Your Handle</label>
+              <input id="listing-twitter" type="text" placeholder="@handle" />
+            </div>
+          </div>
+          <button id="listing-btn" onclick="postListing()">📋 Post Listing</button>
+        </div>
+      </div>
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-function clearForm(ids) {
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-}
+      <!-- ══ TAB: ACTIVE LISTINGS ══ -->
+      <div id="tab-listings" class="tab-panel">
+        <div class="page-header">
+          <h2>📌 Active Listings</h2>
+          <p>Browse active project and creator listings.</p>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <h3>Active Listings</h3>
+            <div class="filter-row">
+              <select id="board-type-filter" onchange="loadListings()">
+                <option value="">All</option>
+                <option value="project">Projects</option>
+                <option value="creator">Creators</option>
+              </select>
+              <select id="board-category-filter" onchange="loadListings()">
+                <option value="">All Categories</option>
+                <option value="Micro Creator">Micro Creator</option>
+                <option value="Content Creator">Content Creator</option>
+                <option value="KOL">KOL</option>
+                <option value="Instagram Creator">Instagram Creator</option>
+                <option value="TikTok Creator">TikTok Creator</option>
+                <option value="YouTube Creator">YouTube Creator</option>
+                <option value="Other">Other</option>
+              </select>
+              <select id="board-platform-filter" onchange="loadListings()">
+                <option value="">All Platforms</option>
+                <option value="Twitter/X">Twitter / X</option>
+                <option value="Instagram">Instagram</option>
+                <option value="TikTok">TikTok</option>
+                <option value="YouTube">YouTube</option>
+              </select>
+            </div>
+          </div>
+          <div id="listing-list">Loading...</div>
+        </div>
+      </div>
 
-function setLoading(btnId, loading, label) {
-  const btn = document.getElementById(btnId);
-  if (!btn) return;
-  btn.disabled  = loading;
-  btn.innerText = label;
-}
+    </main>
 
-let toastTimer;
-function showToast(msg, type = 'info') {
-  let el = document.getElementById('toast');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'toast';
-    document.body.appendChild(el);
-  }
-  el.className = `toast toast-${type}`;
-  el.innerText = msg;
-  el.style.display = 'block';
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.style.display = 'none'; }, 4000);
-}
+    <aside class="ad-sidebar ad-right">
+      <div class="ad-slot">
+        <span class="ad-label">Sponsored</span>
+        <div class="ad-logo">🌟</div>
+        <div class="ad-title">Promote Your Project</div>
+        <div class="ad-desc">Reach active web3 creators now</div>
+        <div class="ad-cta">DM @itstorvian</div>
+      </div>
+    </aside>
 
-loadHome();
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
