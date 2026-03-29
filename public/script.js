@@ -75,7 +75,14 @@ function updateFeePreview() {
 
 // ─── Wallet ───────────────────────────────────────────────────────────────────
 async function connectWallet() {
-  if (!window.ethereum) return alert('Please install MetaMask!');
+  if (!window.ethereum) {
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      window.open(`https://metamask.app.link/dapp/${window.location.host}`, '_blank');
+      return;
+    }
+    return alert('Please install MetaMask!');
+  }
   await window.ethereum.request({ method: 'eth_requestAccounts' });
   const chainId = await window.ethereum.request({ method: 'eth_chainId' });
   if (chainId !== ARC_CHAIN_ID) {

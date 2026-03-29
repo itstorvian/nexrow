@@ -839,8 +839,9 @@ code {
 }
 
 @media (max-width: 768px) {
-  .header-inner { flex-wrap: wrap; height: auto; padding: 12px; gap: 12px; }
-  .tab-nav { order: 3; width: 100%; justify-content: center; }
+  .header-inner { flex-wrap: wrap; height: auto; padding: 12px; gap: 8px; }
+  .tab-nav { order: 3; width: 100%; justify-content: flex-start; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; gap: 4px; }
+  .tab-btn { font-size: 11px; padding: 6px 10px; white-space: nowrap; flex-shrink: 0; }
   .hero-title { font-size: 32px; }
   .form-grid { grid-template-columns: 1fr; }
   .form-group.full-width { grid-column: 1; }
