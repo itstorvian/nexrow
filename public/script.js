@@ -52,14 +52,24 @@ function updateConditionHint() {
   const condition = document.getElementById('condition');
   if (!hint || !condition) return;
   if (platform === 'twitter') {
-    hint.innerText      = 'Twitter/X: likes > 100, followers >= 500, views < 10000';
+    hint.innerText        = 'Twitter/X: likes > 100, followers >= 500, views < 10000';
     condition.placeholder = 'likes > 100';
-    condition.value     = '';
+    condition.value       = '';
   } else {
-    hint.innerText      = 'Instagram / TikTok / YouTube için "manual" yazın.';
+    hint.innerText        = 'Instagram / TikTok / YouTube: type "manual"';
     condition.placeholder = 'manual';
-    condition.value     = 'manual';
+    condition.value       = 'manual';
   }
+}
+
+function updateFeePreview() {
+  const amount  = parseFloat(document.getElementById('amount')?.value || 0);
+  const preview = document.getElementById('fee-preview');
+  if (!preview) return;
+  if (!amount || amount <= 0) { preview.innerText = ''; return; }
+  const fee   = parseFloat((amount * 0.02).toFixed(6));
+  const total = parseFloat((amount + fee).toFixed(6));
+  preview.innerHTML = `Creator receives: <b>${amount} USDC</b> &nbsp;|&nbsp; Platform fee: <b>${fee} USDC</b> (2%) &nbsp;|&nbsp; You pay: <b>${total} USDC</b>`;
 }
 
 // ─── Wallet ───────────────────────────────────────────────────────────────────
@@ -128,7 +138,7 @@ window.addEventListener('load', async () => {
 
 // ─── HOME ─────────────────────────────────────────────────────────────────────
 async function loadHome() {
-  await Promise.all([loadHomeStats(), loadSpotlight()]);
+  loadHomeStats();
 }
 
 async function loadHomeStats() {
@@ -162,70 +172,6 @@ async function loadHomeStats() {
   } catch {}
 }
 
-async function loadSpotlight() {
-  try {
-    const res  = await fetch(`${API}/listings/spotlight`);
-    const data = await res.json();
-
-    const creatorEl = document.getElementById('spotlight-creators');
-    const projectEl = document.getElementById('spotlight-projects');
-    const listingEl = document.getElementById('spotlight-listings');
-
-    if (!data.topCreators.length) {
-      creatorEl.innerHTML = '<p class="empty">No trusted creators yet.</p>';
-    } else {
-      creatorEl.innerHTML = data.topCreators.map((c, i) => `
-        <div class="spotlight-card">
-          <span class="rank">#${i + 1}</span>
-          <div class="spotlight-info">
-            <b>${c.twitter}</b>
-            <div style="display:flex;gap:4px;flex-wrap:wrap;">
-              <span class="category-tag">${c.category}</span>
-              <span class="platform-tag">${c.platform || 'Twitter/X'}</span>
-              ${c.trusted ? '<span class="trusted-badge">🛡️ Trusted</span>' : ''}
-            </div>
-          </div>
-          <span class="score-badge">${c.score} pts</span>
-        </div>
-      `).join('');
-    }
-
-    if (!data.projects.length) {
-      projectEl.innerHTML = '<p class="empty">No project listings yet.</p>';
-    } else {
-      projectEl.innerHTML = data.projects.map(l => `
-        <div class="spotlight-card">
-          <div class="spotlight-info">
-            <b>${l.title}</b>
-            <div style="display:flex;gap:4px;flex-wrap:wrap;">
-              <span class="category-tag">${l.category}</span>
-              ${l.platform ? `<span class="platform-tag">${l.platform}</span>` : ''}
-            </div>
-          </div>
-          <span class="budget-badge">${l.budget} USDC</span>
-        </div>
-      `).join('');
-    }
-
-    if (!data.creators.length) {
-      listingEl.innerHTML = '<p class="empty">No creator listings yet.</p>';
-    } else {
-      listingEl.innerHTML = data.creators.map(l => `
-        <div class="spotlight-card">
-          <div class="spotlight-info">
-            <b>${l.title}</b>
-            <div style="display:flex;gap:4px;flex-wrap:wrap;">
-              <span class="category-tag">${l.category}</span>
-              ${l.platform ? `<span class="platform-tag">${l.platform}</span>` : ''}
-            </div>
-          </div>
-          <span class="budget-badge">${l.budget} USDC</span>
-        </div>
-      `).join('');
-    }
-  } catch {}
-}
-
 // ─── ESCROW ───────────────────────────────────────────────────────────────────
 async function deposit() {
   const creator       = document.getElementById('creator').value.trim();
@@ -244,26 +190,40 @@ async function deposit() {
     if (!addr) return;
   }
 
+  const baseAmount = parseFloat(amount);
+  const fee        = parseFloat((baseAmount * 0.02).toFixed(6));
+  const total      = parseFloat((baseAmount + fee).toFixed(6));
+
+  const confirmed = window.confirm(
+    `Deposit summary:\n\nCreator receives: ${baseAmount} USDC\nPlatform fee (2%): ${fee} USDC\nTotal you pay: ${total} USDC\n\nThis will send 2 transactions.`
+  );
+  if (!confirmed) return;
+
   setLoading('deposit-btn', true, 'Sending...');
   try {
     const provider     = new ethers.BrowserProvider(window.ethereum);
     const signer       = await provider.getSigner();
     const usdc         = new ethers.Contract(USDC_CONTRACT, USDC_ABI, signer);
-    const amountParsed = ethers.parseUnits(amount.toString(), 6);
 
-    const tx = await usdc.transfer(creatorWallet, amountParsed);
-    showToast('TX submitted, waiting...', 'info');
-    await tx.wait();
+    showToast('TX 1/2: Sending to creator...', 'info');
+    const tx1 = await usdc.transfer(creatorWallet, ethers.parseUnits(baseAmount.toString(), 6));
+    await tx1.wait();
+
+    showToast('TX 2/2: Sending platform fee...', 'info');
+    const tx2 = await usdc.transfer(PLATFORM_WALLET, ethers.parseUnits(fee.toString(), 6));
+    await tx2.wait();
 
     const res  = await fetch(`${API}/deposit`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ creator, condition, amount, txHash: tx.hash, creatorWallet, payerWallet: currentAddress }),
+      body: JSON.stringify({ creator, condition, amount: baseAmount, txHash: tx1.hash, creatorWallet, payerWallet: currentAddress }),
     });
     const data = await res.json();
     if (!res.ok) return showToast(data.error || 'Server error', 'error');
 
     showToast(`✅ Escrow #${data.escrow.id} created!`, 'success');
     clearForm(['creator', 'condition', 'creator-wallet', 'amount']);
+    const fp = document.getElementById('fee-preview');
+    if (fp) fp.innerText = '';
     await updateBalance(currentAddress);
     loadEscrows();
   } catch (err) {
@@ -311,41 +271,16 @@ async function approveManual(id) {
 async function releaseFromCache(id) {
   const e = escrowCache[id];
   if (!e) return showToast('Refresh the page and try again', 'error');
-  await releasePayment(id, { fee: e.fee, creatorAmount: e.creatorAmount, platformWallet: PLATFORM_WALLET, escrow: e });
-}
-
-async function releasePayment(id, checkData) {
-  if (!currentAddress) return showToast('Connect wallet to release', 'error');
-  const { fee, creatorAmount, escrow, platformWallet } = checkData;
-
-  const confirmed = window.confirm(
-    `Release payment?\n\nCreator receives: ${creatorAmount} USDC\nPlatform fee: ${fee} USDC (2%)\n\nThis will send 2 transactions.`
-  );
-  if (!confirmed) return;
-
+  if (!window.confirm(`Confirm release of escrow #${id}?\nCreator already received ${e.amount} USDC at deposit.`)) return;
   try {
-    const provider = new ethers.BrowserProvider(window.ethereum);
-    const signer   = await provider.getSigner();
-    const usdc     = new ethers.Contract(USDC_CONTRACT, USDC_ABI, signer);
-
-    showToast('TX 1/2: Sending to creator...', 'info');
-    const tx1 = await usdc.transfer(escrow.creatorWallet, ethers.parseUnits(creatorAmount.toString(), 6));
-    await tx1.wait();
-
-    showToast('TX 2/2: Sending platform fee...', 'info');
-    const tx2 = await usdc.transfer(platformWallet, ethers.parseUnits(fee.toString(), 6));
-    await tx2.wait();
-
     await fetch(`${API}/release/${id}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ releaseTxHash: tx1.hash }),
+      body: JSON.stringify({ releaseTxHash: e.txHash }),
     });
-
-    showToast(`💰 Payment released! Creator: ${creatorAmount} USDC`, 'success');
-    await updateBalance(currentAddress);
+    showToast(`✅ Escrow #${id} marked as paid!`, 'success');
     loadEscrows();
   } catch (err) {
-    showToast(`Release failed: ${err.message}`, 'error');
+    showToast(err.message, 'error');
   }
 }
 
@@ -419,9 +354,9 @@ function renderEscrow(e) {
         <span class="badge badge-${e.status}">${statusLabel}</span>
       </div>
       <div class="escrow-details">
-        <div class="detail-row"><span class="label">Amount</span><span class="value">${e.amount} USDC</span></div>
+        <div class="detail-row"><span class="label">Creator gets</span><span class="value">${e.amount} USDC</span></div>
+        <div class="detail-row"><span class="label">Platform fee</span><span class="value">${e.fee} USDC (paid by project)</span></div>
         <div class="detail-row"><span class="label">Condition</span><code>${e.condition}</code></div>
-        ${e.fee ? `<div class="detail-row"><span class="label">Creator gets</span><span class="value">${e.creatorAmount} USDC (fee: ${e.fee})</span></div>` : ''}
         ${e.creatorWallet ? `<div class="detail-row"><span class="label">Creator wallet</span><span class="value mono">${e.creatorWallet.slice(0,6)}...${e.creatorWallet.slice(-4)}</span></div>` : ''}
         ${e.txHash ? `<div class="detail-row"><span class="label">Deposit TX</span><a href="${explorerUrl(e.txHash)}" target="_blank" class="tx-link">${shortHash(e.txHash)}</a></div>` : ''}
         ${e.releaseTxHash ? `<div class="detail-row"><span class="label">Release TX</span><a href="${explorerUrl(e.releaseTxHash)}" target="_blank" class="tx-link">${shortHash(e.releaseTxHash)}</a></div>` : ''}
@@ -438,7 +373,7 @@ function renderEscrow(e) {
         </div>` : ''}
       ${e.status === 'condition_met' ? `
         <div class="escrow-actions">
-          <button onclick="releaseFromCache('${e.id}')">💸 Release Payment</button>
+          <button onclick="releaseFromCache('${e.id}')">✅ Mark as Paid</button>
           <button class="btn-danger" onclick="refund('${e.id}')">↩️ Refund</button>
         </div>` : ''}
     </div>
@@ -499,6 +434,10 @@ async function registerCreator() {
 async function loadCreators() {
   const el = document.getElementById('creator-list');
   if (!el) return;
+
+  document.getElementById('filter-all')?.classList.toggle('active-filter', creatorFilter === 'all');
+  document.getElementById('filter-trusted')?.classList.toggle('active-filter', creatorFilter === 'trusted');
+
   el.innerHTML = '<p class="loading">Loading...</p>';
   try {
     const category = document.getElementById('creator-category-filter')?.value || '';

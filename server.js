@@ -13,8 +13,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Static dosyaları serve et — deploy için kritik
-// Bu sayede Railway'de hem API hem frontend tek server'dan çalışır
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── DB Helpers ───────────────────────────────────────────────────────────────
@@ -32,7 +30,6 @@ const DB_ESCROWS  = path.join(__dirname, 'data', 'escrows.json');
 const DB_CREATORS = path.join(__dirname, 'data', 'creators.json');
 const DB_LISTINGS = path.join(__dirname, 'data', 'listings.json');
 
-// data klasörü yoksa oluştur
 if (!fs.existsSync(path.join(__dirname, 'data'))) {
   fs.mkdirSync(path.join(__dirname, 'data'));
 }
@@ -47,22 +44,11 @@ if (!listingDB.listings) listingDB = { listings: {}, nextId: 1 };
 
 // ─── Categories ───────────────────────────────────────────────────────────────
 const CATEGORIES = [
-  'Micro Creator',
-  'Content Creator',
-  'KOL',
-  'Thread Writer',
-  'Developer',
-  'Artist & Designer',
-  'Educator',
-  'Gaming',
-  'Meme & Community',
-  'DeFi Analyst',
-  'NFT Curator',
-  'Podcast & Video',
-  'Instagram Creator',
-  'TikTok Creator',
-  'YouTube Creator',
-  'Other'
+  'Micro Creator', 'Content Creator', 'KOL', 'Thread Writer',
+  'Developer', 'Artist & Designer', 'Educator', 'Gaming',
+  'Meme & Community', 'DeFi Analyst', 'NFT Curator',
+  'Podcast & Video', 'Instagram Creator', 'TikTok Creator',
+  'YouTube Creator', 'Other'
 ];
 
 const PLATFORMS = ['Twitter/X', 'Instagram', 'TikTok', 'YouTube', 'Other'];
@@ -123,23 +109,30 @@ app.post('/deposit', (req, res) => {
   if (condition.trim() !== 'manual' && !CONDITION_REGEX.test(condition.trim()))
     return res.status(400).json({ error: 'Invalid condition. Use: likes > 100 or "manual"' });
 
+  const baseAmount = parseFloat(amount);
+  // Fee projeden alınır — creator tam miktarı alır
+  const fee           = parseFloat((baseAmount * (FEE_PERCENT / 100)).toFixed(6));
+  const totalFromProject = parseFloat((baseAmount + fee).toFixed(6));
+
   const id = String(escrowDB.nextId++);
   escrowDB.escrows[id] = {
-    id, creator, condition: condition.trim(),
-    amount:        parseFloat(amount),
-    status:        'pending',
-    conditionType: condition.trim() === 'manual' ? 'manual' : 'auto',
-    createdAt:     new Date().toISOString(),
-    updatedAt:     null,
-    creatorWallet: creatorWallet || null,
-    payerWallet:   payerWallet   || null,
-    txHash:        txHash        || null,
-    releaseTxHash: null,
-    fee:           null,
-    creatorAmount: null,
-    lastStats:     null,
+    id, creator,
+    condition:        condition.trim(),
+    amount:           baseAmount,       // creator'ın alacağı miktar
+    fee:              fee,              // platform fee (proje öder)
+    totalFromProject: totalFromProject, // proje toplam ödeyecek
+    status:           'pending',
+    conditionType:    condition.trim() === 'manual' ? 'manual' : 'auto',
+    createdAt:        new Date().toISOString(),
+    updatedAt:        null,
+    creatorWallet:    creatorWallet || null,
+    payerWallet:      payerWallet   || null,
+    txHash:           txHash        || null,
+    releaseTxHash:    null,
+    lastStats:        null,
   };
   saveJSON(DB_ESCROWS, escrowDB);
+  console.log(`📦 Escrow #${id}: ${creator} | ${condition} | ${baseAmount} USDC (+ ${fee} fee = ${totalFromProject} total)`);
   res.json({ success: true, escrow: escrowDB.escrows[id] });
 });
 
@@ -174,14 +167,17 @@ app.post('/check/:id', async (req, res) => {
   escrow.lastStats = stats;
 
   if (met) {
-    const fee           = parseFloat((escrow.amount * (FEE_PERCENT / 100)).toFixed(6));
-    const creatorAmount = parseFloat((escrow.amount - fee).toFixed(6));
-    escrow.status        = 'condition_met';
-    escrow.fee           = fee;
-    escrow.creatorAmount = creatorAmount;
-    escrow.updatedAt     = new Date().toISOString();
+    escrow.status    = 'condition_met';
+    escrow.updatedAt = new Date().toISOString();
     saveJSON(DB_ESCROWS, escrowDB);
-    res.json({ result: 'condition_met', stats, escrow, fee, creatorAmount, platformWallet: PLATFORM_WALLET });
+    res.json({
+      result:         'condition_met',
+      stats,
+      escrow,
+      fee:            escrow.fee,
+      creatorAmount:  escrow.amount,  // creator tam miktarı alır
+      platformWallet: PLATFORM_WALLET
+    });
   } else {
     saveJSON(DB_ESCROWS, escrowDB);
     res.json({ result: 'not_met', stats, escrow });
@@ -194,16 +190,17 @@ app.post('/approve/:id', (req, res) => {
   if (escrow.status !== 'pending')
     return res.status(400).json({ error: `Escrow already ${escrow.status}` });
 
-  const fee           = parseFloat((escrow.amount * (FEE_PERCENT / 100)).toFixed(6));
-  const creatorAmount = parseFloat((escrow.amount - fee).toFixed(6));
-
-  escrow.status        = 'condition_met';
-  escrow.fee           = fee;
-  escrow.creatorAmount = creatorAmount;
-  escrow.updatedAt     = new Date().toISOString();
+  escrow.status    = 'condition_met';
+  escrow.updatedAt = new Date().toISOString();
 
   saveJSON(DB_ESCROWS, escrowDB);
-  res.json({ result: 'condition_met', escrow, fee, creatorAmount, platformWallet: PLATFORM_WALLET });
+  res.json({
+    result:         'condition_met',
+    escrow,
+    fee:            escrow.fee,
+    creatorAmount:  escrow.amount,  // creator tam miktarı alır
+    platformWallet: PLATFORM_WALLET
+  });
 });
 
 app.post('/release/:id', (req, res) => {
@@ -221,7 +218,7 @@ app.post('/release/:id', (req, res) => {
   if (key && creatorDB.creators[key]) {
     const c = creatorDB.creators[key];
     c.completedEscrows = (c.completedEscrows || 0) + 1;
-    c.totalEarned      = parseFloat(((c.totalEarned || 0) + escrow.creatorAmount).toFixed(6));
+    c.totalEarned      = parseFloat(((c.totalEarned || 0) + escrow.amount).toFixed(6));
     c.score            = calculateScore(c);
     c.trusted          = isTrusted(c);
     saveJSON(DB_CREATORS, creatorDB);
@@ -379,7 +376,6 @@ app.post('/listings/:id/close', (req, res) => {
   res.json({ success: true });
 });
 
-// Tüm diğer istekleri index.html'e yönlendir — SPA routing için
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -388,4 +384,5 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`⚡ Nexrow server on http://localhost:${PORT}`);
   console.log(`📁 Data: ${path.join(__dirname, 'data')}`);
+  console.log(`💳 Platform wallet: ${PLATFORM_WALLET}`);
 });

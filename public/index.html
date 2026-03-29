@@ -73,8 +73,8 @@
             Set a goal, lock funds, release only when conditions are met.
           </p>
           <div class="hero-actions">
-            <button onclick="switchTab('escrow')">🔒 Create Escrow</button>
-            <button class="btn-secondary" onclick="switchTab('creators')">🌟 Browse Creators</button>
+            <button onclick="switchTab('escrow')">💰 Pay a Creator</button>
+            <button class="btn-secondary" onclick="switchTab('creators')">🌟 Find Creators</button>
             <button class="btn-secondary" onclick="switchTab('board')">📋 Post a Listing</button>
           </div>
           <p class="hero-note">No trust required. Code enforces the deal.</p>
@@ -102,7 +102,7 @@
               <div class="step-number">03</div>
               <div class="step-icon">✅</div>
               <div class="step-title">Verify & Release</div>
-              <div class="step-desc">Condition met? Payment goes to creator. Not met? Funds return to the project.</div>
+              <div class="step-desc">Condition met? Creator gets full payment. Not met? Funds return to the project.</div>
             </div>
             <div class="step-card">
               <div class="step-number">04</div>
@@ -130,7 +130,7 @@
             <div class="feature-card">
               <div class="feature-icon">⚡</div>
               <div class="feature-title">Low Fees on ARC</div>
-              <div class="feature-desc">Micro-payments are economically viable. 2% platform fee. Fast transactions on ARC Network.</div>
+              <div class="feature-desc">Creator keeps 100% of agreed amount. 2% platform fee paid by the project. Fair for everyone.</div>
             </div>
             <div class="feature-card">
               <div class="feature-icon">🛡️</div>
@@ -150,35 +150,11 @@
           </div>
         </section>
 
-        <section class="spotlight-section">
-          <div class="spotlight-col">
-            <div class="spotlight-col-header">
-              <h3>🛡️ Trusted Creators</h3>
-              <button class="btn-sm" onclick="switchTab('creators');setCreatorFilter('trusted')">View All →</button>
-            </div>
-            <div id="spotlight-creators">Loading...</div>
-          </div>
-          <div class="spotlight-col">
-            <div class="spotlight-col-header">
-              <h3>🔥 Latest Projects</h3>
-              <button class="btn-sm" onclick="switchTab('board')">View All →</button>
-            </div>
-            <div id="spotlight-projects">Loading...</div>
-          </div>
-          <div class="spotlight-col">
-            <div class="spotlight-col-header">
-              <h3>💼 Creator Listings</h3>
-              <button class="btn-sm" onclick="switchTab('board')">View All →</button>
-            </div>
-            <div id="spotlight-listings">Loading...</div>
-          </div>
-        </section>
-
         <section class="cta-section">
           <h2 class="cta-title">Ready to get started?</h2>
           <p class="cta-sub">Join the first condition-based creator payment protocol on ARC Network.</p>
           <div class="cta-actions">
-            <button onclick="switchTab('escrow')">🔒 Create Your First Escrow</button>
+            <button onclick="switchTab('escrow')">💰 Pay a Creator</button>
             <button class="btn-secondary" onclick="switchTab('creators')">🌟 Register as Creator</button>
           </div>
         </section>
@@ -189,7 +165,7 @@
       <div id="tab-escrow" class="tab-panel">
         <div class="page-header">
           <h2>🔒 Escrow</h2>
-          <p>Lock USDC and release it only when the condition is met.</p>
+          <p>Lock USDC and release it only when the condition is met. Creator keeps 100% — platform fee paid by you.</p>
         </div>
         <div id="escrow-stats" class="stats-bar"></div>
         <div class="card">
@@ -219,11 +195,14 @@
               <input id="creator-wallet" type="text" placeholder="0x..." />
             </div>
             <div class="form-group">
-              <label>Amount (USDC)</label>
-              <input id="amount" type="number" placeholder="100" min="0.01" step="0.01" />
+              <label>Amount for Creator (USDC)</label>
+              <input id="amount" type="number" placeholder="100" min="0.01" step="0.01" oninput="updateFeePreview()" />
+            </div>
+            <div class="form-group full-width">
+              <div id="fee-preview" class="fee-preview"></div>
             </div>
           </div>
-          <button id="deposit-btn" onclick="deposit()">💰 Deposit</button>
+          <button id="deposit-btn" onclick="deposit()">💰 Pay a Creator</button>
         </div>
         <div class="card">
           <div class="card-header">
@@ -306,7 +285,7 @@
           <div class="card-header">
             <h3>🏆 Leaderboard</h3>
             <div class="filter-row">
-              <button class="btn-sm active-filter" id="filter-all" onclick="setCreatorFilter('all')">All</button>
+              <button class="btn-sm" id="filter-all" onclick="setCreatorFilter('all')">All</button>
               <button class="btn-sm" id="filter-trusted" onclick="setCreatorFilter('trusted')">🛡️ Trusted</button>
               <select id="creator-category-filter" onchange="loadCreators()">
                 <option value="">All Categories</option>

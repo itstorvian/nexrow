@@ -927,3 +927,14 @@ code {
 .trusted-nav-btn { color: var(--green); }
 .trusted-nav-btn:hover { background: rgba(0,229,160,0.1); }
 .trusted-nav-btn.active { background: rgba(0,229,160,0.1); color: var(--green); }
+.fee-preview {
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  line-height: 1.6;
+}
+
+.fee-preview b { color: var(--green); }
